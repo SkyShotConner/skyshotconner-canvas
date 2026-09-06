@@ -25,36 +25,50 @@ const SUPABASE_URL='https://xdkoutuetajwzwrjzehw.supabase.co';
 const SUPABASE_KEY='sb_publishable_K0r7cxL94PMJ5S0HM8aKfQ_cc73t2hu';
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const box=document.getElementById('authBox');
-const esc=v=>String(v??'').replace(/[&<>\'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const esc=v=>String(v??'').replace(/[&<>\'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));
 const money=v=>'R '+Number(v||0).toLocaleString('en-ZA',{minimumFractionDigits:2});
 const cart=()=>{try{return JSON.parse(localStorage.getItem('ssc_canvas_cart')||'[]')}catch{return[]}};
 document.getElementById('year').textContent=new Date().getFullYear();
 document.getElementById('cartCount').textContent=cart().reduce((n,x)=>n+Number(x.qty||1),0);
 document.getElementById('menuToggle').onclick=()=>document.getElementById('mainNav').classList.toggle('open');
 function showError(message){box.className='account-error';box.innerHTML='<h2>Account could not load</h2><p>'+esc(message)+'</p><button class="btn btn-primary" onclick="location.reload()">Try again</button>';}
-function authForms(){box.className='';box.innerHTML='<div class="account-grid"><section class="account-card"><span class="eyebrow">WELCOME BACK</span><h1>Sign in</h1><p>Sign in to manage your SkyShotConner Canvas orders.</p><form id="loginForm"><input name="email" type="email" required autocomplete="email" placeholder="Email address"><input name="password" type="password" required autocomplete="current-password" placeholder="Password"><div class="account-actions"><button class="btn btn-primary" type="submit">Sign in</button></div><p id="loginMsg" class="account-msg"></p></form></section><section class="account-card"><span class="eyebrow">NEW CUSTOMER</span><h1>Create account</h1><p>Create an account to save your details and track orders.</p><form id="signupForm"><input name="name" required autocomplete="name" placeholder="Full name"><input name="email" type="email" required autocomplete="email" placeholder="Email address"><input name="password" type="password" required minlength="6" autocomplete="new-password" placeholder="Password — minimum 6 characters"><div class="account-actions"><button class="btn btn-primary" type="submit">Create account</button></div><p id="signupMsg" class="account-msg"></p></form></section></div>';
-document.getElementById('loginForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget),m=document.getElementById('loginMsg');m.textContent='Signing in…';const r=await db.auth.signInWithPassword({email:f.get('email'),password:f.get('password')});if(r.error){m.textContent=r.error.message;return}location.reload()};
+function authForms(message=''){box.className='';box.innerHTML='<div class="account-grid"><section class="account-card"><span class="eyebrow">WELCOME BACK</span><h1>Sign in</h1><p>Sign in to manage your SkyShotConner Canvas orders.</p><form id="loginForm"><input name="email" type="email" required autocomplete="email" placeholder="Email address"><input name="password" type="password" required autocomplete="current-password" placeholder="Password"><div class="account-actions"><button class="btn btn-primary" type="submit">Sign in</button></div><p id="loginMsg" class="account-msg">'+esc(message)+'</p></form></section><section class="account-card"><span class="eyebrow">NEW CUSTOMER</span><h1>Create account</h1><p>Create an account to save your details and track orders.</p><form id="signupForm"><input name="name" required autocomplete="name" placeholder="Full name"><input name="email" type="email" required autocomplete="email" placeholder="Email address"><input name="password" type="password" required minlength="6" autocomplete="new-password" placeholder="Password — minimum 6 characters"><div class="account-actions"><button class="btn btn-primary" type="submit">Create account</button></div><p id="signupMsg" class="account-msg"></p></form></section></div>';
+document.getElementById('loginForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget),m=document.getElementById('loginMsg');m.textContent='Signing in…';const r=await db.auth.signInWithPassword({email:f.get('email'),password:f.get('password')});if(r.error){m.textContent=r.error.message;return}if(r.data.session)await dashboard(r.data.user);};
 document.getElementById('signupForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget),m=document.getElementById('signupMsg');m.textContent='Creating account…';const r=await db.auth.signUp({email:f.get('email'),password:f.get('password'),options:{data:{full_name:f.get('name')}}});if(r.error){m.textContent=r.error.message;return}m.textContent=r.data.session?'Account created.':'Account created. Check your email to confirm it before signing in.'};
 }
 async function dashboard(user){
+try{
+box.className='account-loading';box.innerHTML='<div class="loader-plane">✈</div><h2>Loading your account…</h2><p>Getting your profile and orders.</p>';
 const profileResult=await db.from('profiles').select('*').eq('id',user.id).maybeSingle();
 const profile=profileResult.data||{};
 const ordersResult=await db.from('orders').select('*').eq('user_id',user.id).order('created_at',{ascending:false});
 if(ordersResult.error)console.warn('Orders:',ordersResult.error);
 const name=profile.full_name||user.user_metadata?.full_name||user.email?.split('@')[0]||'Customer';
 box.className='';box.innerHTML='<section class="account-card"><div style="display:flex;justify-content:space-between;gap:20px;align-items:flex-start;flex-wrap:wrap"><div><span class="eyebrow">YOUR ACCOUNT</span><h1>Welcome, '+esc(name)+'.</h1><p>'+esc(user.email)+'</p></div><button id="signOut" class="btn btn-outline" type="button">Sign out</button></div></section><div class="account-grid" style="margin-top:22px"><section class="account-card"><span class="eyebrow">PROFILE</span><h2>Your details</h2><form id="profileForm"><input name="full_name" value="'+esc(profile.full_name||name)+'" placeholder="Full name"><input name="phone" value="'+esc(profile.phone||'')+'" placeholder="Phone number"><div class="account-actions"><button class="btn btn-primary" type="submit">Save details</button></div><p id="profileMsg" class="account-msg"></p></form></section><section class="account-card"><span class="eyebrow">CART</span><h2>Ready to checkout?</h2><p>You currently have <strong>'+cart().reduce((n,x)=>n+Number(x.qty||1),0)+'</strong> item(s) in your cart.</p><div class="account-actions"><a class="btn btn-primary" href="cart.html">View cart</a><a class="btn btn-outline" href="shop.html">Continue shopping</a></div></section></div><section class="account-card" style="margin-top:22px"><span class="eyebrow">ORDER HISTORY</span><h2>Your orders</h2><div id="orders">'+(ordersResult.data?.length?ordersResult.data.map(o=>'<div class="order-item"><div><strong>#'+esc(o.id.slice(0,8).toUpperCase())+'</strong><br><small>'+new Date(o.created_at).toLocaleDateString('en-ZA')+'</small></div><span>'+esc(o.status||'pending')+'</span><strong>'+money(o.total)+'</strong></div>').join(''):'<p>No orders yet. Your future canvas orders will appear here.</p>')+'</div></section>';
-document.getElementById('signOut').onclick=async()=>{await db.auth.signOut();location.reload()};
-document.getElementById('profileForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget),m=document.getElementById('profileMsg');const r=await db.from('profiles').upsert({id:user.id,full_name:f.get('full_name'),phone:f.get('phone')});m.textContent=r.error?r.error.message:'Details saved.'};
+document.getElementById('signOut').onclick=async()=>{await db.auth.signOut();authForms()};
+document.getElementById('profileForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget),m=document.getElementById('profileMsg');m.textContent='Saving…';const r=await db.from('profiles').upsert({id:user.id,full_name:f.get('full_name'),phone:f.get('phone')});m.textContent=r.error?r.error.message:'Details saved.'};
+}catch(e){console.error(e);showError(e.message||'Your account data could not be loaded.');}
 }
-async function start(){try{if(!window.supabase||!window.supabase.createClient)throw new Error('Supabase library did not load. Please refresh the page.');
-const sessionResult=await db.auth.getSession();
-if(sessionResult.error)throw sessionResult.error;
-if(!sessionResult.data.session){authForms();return;}
-const userResult=await db.auth.getUser(sessionResult.data.session.access_token);
-if(userResult.error){await db.auth.signOut();authForms();return;}
-if(userResult.data.user)await dashboard(userResult.data.user);else authForms();
-}catch(e){console.error(e);showError(e.message||'Unexpected error.')}}
-start();
+function withTimeout(promise,ms){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error('Authentication is taking too long. You can still sign in below.')),ms))]);}
+
+// Render the useful logged-out screen immediately. The page will never remain stuck on the loader.
+authForms();
+
+// Supabase recommends listening for auth changes for initial sessions and sign-in/sign-out events.
+const authListener=db.auth.onAuthStateChange((event,session)=>{
+if(session&&session.user&&(event==='INITIAL_SESSION'||event==='SIGNED_IN'||event==='TOKEN_REFRESHED'||event==='USER_UPDATED')){
+  dashboard(session.user);
+}else if(event==='SIGNED_OUT'){
+  authForms();
+}
+});
+
+// Also check the persisted browser session, but never let this request trap the page on a loading screen.
+withTimeout(db.auth.getSession(),5000).then(async result=>{
+if(result?.error){console.warn('Session check:',result.error);return;}
+const session=result?.data?.session;
+if(session?.user)await dashboard(session.user);
+}).catch(e=>console.warn('Session check timeout:',e.message));
 })();
 </script>
 </body>
