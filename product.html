@@ -1,1 +1,59 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Product — SkyShotConner Canvas</title><link rel="stylesheet" href="styles.css"></head><body><div id="loader" class="page-loader"><div class="loader-plane">✈</div><span>Loading product…</span></div><header class="site-header"><a class="brand" href="index.html"><span class="brand-mark">✈</span><span>SkyShotConner <b>Canvas</b></span></a><button class="menu-toggle">☰</button><nav class="main-nav"><a href="index.html">Home</a><a href="shop.html">Shop</a><a href="account.html">Account</a><a class="cart-link" href="cart.html">Cart <span id="cartCount">0</span></a></nav></header><main class="page"><div id="product"></div></main><footer><strong>SkyShotConner Canvas</strong><small>© <span id="year"></span></small></footer><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="app.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="View an aviation canvas from SkyShotConner Canvas.">
+<title>Product — SkyShotConner Canvas</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.detail-error{padding:2rem;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.04);text-align:center}.detail-loading{padding:3rem;text-align:center;opacity:.75}.detail-main-image img{width:100%;height:100%;object-fit:cover}.product-image-placeholder{min-height:420px;display:flex;align-items:center;justify-content:center;font-size:5rem;opacity:.3;border-radius:18px;background:rgba(255,255,255,.04)}
+</style>
+</head>
+<body>
+<div id="loader" class="page-loader"><div class="loader-plane">✈</div><span>Loading product…</span></div>
+<header class="site-header">
+<a class="brand" href="index.html"><span class="brand-mark">✈</span><span>SkyShotConner <b>Canvas</b></span></a>
+<button class="menu-toggle" aria-label="Open menu">☰</button>
+<nav class="main-nav"><a href="index.html">Home</a><a href="shop.html">Shop</a><a href="account.html">Account</a><a class="cart-link" href="cart.html">Cart <span id="cartCount">0</span></a></nav>
+</header>
+<main class="page"><div id="product"><div class="detail-loading">Loading product…</div></div></main>
+<footer><strong>SkyShotConner Canvas</strong><small>© <span id="year"></span></small></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+'use strict';
+const SUPABASE_URL='https://xdkoutuetajwzwrjzehw.supabase.co';
+const SUPABASE_KEY='sb_publishable_K0r7cxL94PMJ5S0HM8aKfQ_cc73t2hu';
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const el=document.getElementById('product'),loader=document.getElementById('loader');
+const esc=v=>String(v??'').replace(/[&<>\'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const money=v=>'R '+Number(v||0).toLocaleString('en-ZA',{minimumFractionDigits:2});
+function hide(){if(loader){loader.style.opacity='0';loader.style.pointerEvents='none';setTimeout(()=>loader.remove(),250)}}
+function cartCount(){try{const c=JSON.parse(localStorage.getItem('ssc_canvas_cart')||'[]');document.getElementById('cartCount').textContent=c.reduce((n,x)=>n+Number(x.qty||1),0)}catch{}}
+function publicImage(path){return path?db.storage.from('product-images').getPublicUrl(path).data.publicUrl:''}
+function addCart(p,variant,qty){let c=[];try{c=JSON.parse(localStorage.getItem('ssc_canvas_cart')||'[]')}catch{}const key=p.id+':'+(variant?.id||'');const old=c.find(x=>x.key===key);const item={key,product_id:p.id,variant_id:variant?.id||null,name:p.name,price:Number(variant?.price??p.price),image:p.image||'',qty:Number(qty)||1,sku:variant?.sku||p.sku||''};if(old)old.qty+=item.qty;else c.push(item);localStorage.setItem('ssc_canvas_cart',JSON.stringify(c));cartCount();const b=document.getElementById('addProduct');if(b){b.textContent='Added to cart ✓';setTimeout(()=>b.textContent='Add to cart',1200)}}
+async function load(){
+try{
+const id=new URLSearchParams(location.search).get('id');
+if(!id){el.innerHTML='<div class="detail-error"><h2>Product not found</h2><p>No product was selected.</p><a class="btn btn-primary" href="shop.html">Back to shop</a></div>';return}
+const r=await db.from('products').select('id,category_id,name,description,short_description,price,stock,sku,is_active,is_featured,created_at,categories(name),product_images(storage_path,is_primary,sort_order),product_variants(id,name,price,sku,is_active)').eq('id',id).eq('is_active',true).single();
+if(r.error)throw r.error;
+const p=r.data;
+const images=(p.product_images||[]).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)).map(x=>publicImage(x.storage_path)).filter(Boolean);
+p.image=images[0]||'';
+const variants=(p.product_variants||[]).filter(v=>v.is_active);
+const main=p.image?'<div class="detail-main-image"><img id="mainProductImage" src="'+esc(p.image)+'" alt="'+esc(p.name)+'"></div>':'<div class="product-image-placeholder">✈</div>';
+el.innerHTML='<div class="product-detail"><div><div id="mainVisual">'+main+'</div>'+(images.length>1?'<div class="thumbs">'+images.map((src,i)=>'<button type="button" class="thumb" data-src="'+esc(src)+'"><img src="'+esc(src)+'" alt=""></button>').join('')+'</div>':'')+'</div><div class="detail-copy"><span class="eyebrow">'+esc(p.categories?.name||'AVIATION CANVAS')+'</span><h1>'+esc(p.name)+'</h1><p class="detail-description">'+esc(p.description||p.short_description||'Premium aviation photography printed on premium canvas.')+'</p><div class="detail-price" id="detailPrice">'+money(p.price)+'</div>'+(variants.length?'<div class="variant-grid" id="variants">'+variants.map((v,i)=>'<button type="button" class="variant-btn '+(i===0?'selected':'')+'" data-id="'+v.id+'">'+esc(v.name)+'<small>'+money(v.price??p.price)+'</small></button>').join('')+'</div>':'')+'<label class="field-label">Quantity<input id="qty" type="number" min="1" value="1"></label><button id="addProduct" class="btn btn-primary btn-wide" '+(p.stock<=0?'disabled':'')+'>'+(p.stock<=0?'Out of stock':'Add to cart')+'</button><div class="product-meta"><span>SKU: '+esc(p.sku||'—')+'</span><span>Premium aviation photography</span></div></div></div>';
+let selected=variants[0]||null;
+document.querySelectorAll('.variant-btn').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.variant-btn').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');selected=variants.find(v=>v.id===b.dataset.id)||null;document.getElementById('detailPrice').textContent=money(selected?.price??p.price)}));
+document.querySelectorAll('.thumb').forEach(b=>b.addEventListener('click',()=>{const m=document.getElementById('mainProductImage');if(m)m.src=b.dataset.src}));
+document.getElementById('addProduct')?.addEventListener('click',()=>addCart(p,selected,document.getElementById('qty').value));
+} catch(err){console.error('Product load error:',err);el.innerHTML='<div class="detail-error"><h2>Could not load this product</h2><p>The product could not be retrieved from the shop database.</p><a class="btn btn-primary" href="shop.html">Back to shop</a></div>'}
+finally{hide()}
+}
+cartCount();document.getElementById('year').textContent=new Date().getFullYear();load();setTimeout(hide,5000);
+})();
+</script>
+</body>
+</html>
