@@ -1,1 +1,49 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cart — SkyShotConner Canvas</title><link rel="stylesheet" href="styles.css"></head><body><header class="site-header"><a class="brand" href="index.html"><span class="brand-mark">✈</span><span>SkyShotConner <b>Canvas</b></span></a><button class="menu-toggle">☰</button><nav class="main-nav"><a href="index.html">Home</a><a href="shop.html">Shop</a><a href="account.html">Account</a><a class="cart-link" href="cart.html">Cart <span id="cartCount">0</span></a></nav></header><main class="page"><span class="eyebrow">YOUR ORDER</span><h1>Your cart.</h1><div id="cart"></div></main><footer><strong>SkyShotConner Canvas</strong><small>© <span id="year"></span></small></footer><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="app.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cart — SkyShotConner Canvas</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.cart-error,.cart-empty{padding:2rem;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.04);text-align:center}.cart-thumb img{width:100%;height:100%;object-fit:cover}.cart-thumb{overflow:hidden}.cart-total{margin-top:1.5rem}.cart-product small{display:block;opacity:.65;margin-top:.25rem}
+</style>
+</head>
+<body>
+<header class="site-header">
+<a class="brand" href="index.html"><span class="brand-mark">✈</span><span>SkyShotConner <b>Canvas</b></span></a>
+<button class="menu-toggle" aria-label="Open menu">☰</button>
+<nav class="main-nav"><a href="index.html">Home</a><a href="shop.html">Shop</a><a href="account.html">Account</a><a class="cart-link" href="cart.html">Cart <span id="cartCount">0</span></a></nav>
+</header>
+<main class="page">
+<span class="eyebrow">YOUR ORDER</span>
+<h1>Your cart.</h1>
+<div id="cart"><div class="cart-empty"><p>Loading your cart…</p></div></div>
+</main>
+<footer><strong>SkyShotConner Canvas</strong><small>© <span id="year"></span></small></footer>
+<script>
+(function(){
+'use strict';
+const KEY='ssc_canvas_cart';
+const el=document.getElementById('cart');
+const count=document.getElementById('cartCount');
+const money=v=>'R '+Number(v||0).toLocaleString('en-ZA',{minimumFractionDigits:2});
+const esc=v=>String(v??'').replace(/[&<>\'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+function read(){try{const x=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(x)?x:[]}catch{return[]}}
+function save(c){localStorage.setItem(KEY,JSON.stringify(c));render()}
+function render(){
+const c=read();
+count.textContent=c.reduce((n,x)=>n+Number(x.qty||1),0);
+if(!c.length){el.innerHTML='<div class="cart-empty"><div class="empty-icon">✈</div><h2>Your cart is empty</h2><p>Find an aviation canvas you love and add it here.</p><a class="btn btn-primary" href="shop.html">Shop canvases</a></div>';return}
+const total=c.reduce((s,x)=>s+Number(x.price||0)*Number(x.qty||1),0);
+el.innerHTML='<div class="cart-list">'+c.map((p,i)=>'<div class="cart-row"><div class="cart-thumb">'+(p.image?'<img src="'+esc(p.image)+'" alt="'+esc(p.name)+'">':'✈')+'</div><div class="cart-product"><strong>'+esc(p.name||'Aviation Canvas')+'</strong><small>'+esc(p.sku||'')+'</small><div class="qty-controls"><button type="button" data-minus="'+i+'">−</button><span>'+Number(p.qty||1)+'</span><button type="button" data-plus="'+i+'">+</button></div></div><strong>'+money(Number(p.price||0)*Number(p.qty||1))+'</strong><button type="button" class="remove-btn" data-remove="'+i+'">Remove</button></div>').join('')+'</div><div class="cart-total"><div><span>Total</span><strong>'+money(total)+'</strong></div><a class="btn btn-primary" href="account.html#checkout">Checkout</a></div>';
+el.querySelectorAll('[data-minus]').forEach(b=>b.onclick=()=>{const c=read(),i=Number(b.dataset.minus);c[i].qty=Math.max(1,Number(c[i].qty||1)-1);save(c)});
+el.querySelectorAll('[data-plus]').forEach(b=>b.onclick=()=>{const c=read(),i=Number(b.dataset.plus);c[i].qty=Number(c[i].qty||1)+1;save(c)});
+el.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{const c=read();c.splice(Number(b.dataset.remove),1);save(c)});
+}
+document.getElementById('year').textContent=new Date().getFullYear();
+render();
+})();
+</script>
+</body>
+</html>
