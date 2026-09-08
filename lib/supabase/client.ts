@@ -8,7 +8,10 @@ export function createClient() {
   return createBrowserClient<Database>(url, key)
 }
 
-export const storageUrl = (path: string) => {
+export const storageUrl = (path: string, bucket = 'product-images') => {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL
-  return base ? `${base}/storage/v1/object/public/product-images/${path}` : ''
+  if (!base || !path) return ''
+  return `${base}/storage/v1/object/public/${bucket}/${path}`
 }
+
+export const siteImageUrl = (path: string) => storageUrl(path, 'site-images')
