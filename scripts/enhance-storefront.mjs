@@ -29,11 +29,10 @@ if(hs>=0&&ss>hs){
   s=s.slice(0,hs)+home+s.slice(ss)
 }
 
-// Remove the obsolete Shipping link if it exists in the generated footer.
-s=s.replace('<button onClick={()=>nav(\'/shipping\')}>Shipping</button>','')
-s=s.replace('<button onClick={()=>nav("/shipping")}>Shipping</button>','')
-s=s.replace('<a href="/shipping">Shipping</a>','')
-s=s.replace('<a onClick={()=>nav(\'/shipping\')}>Shipping</a>','')
+// Remove the obsolete Shipping link in any common markup form.
+s=s.replace(/<button[^>]*>\s*Shipping\s*<\/button>/gi,'')
+s=s.replace(/<a[^>]*(?:href=["']\/shipping["'][^>]*)>\s*Shipping\s*<\/a>/gi,'')
+s=s.replace(/<[^>]+onClick=\{\(\)=>nav\(["']\/shipping["']\)\}[^>]*>\s*Shipping\s*<\/[^>]+>/gi,'')
 
 fs.writeFileSync(file,s)
 console.log('Storefront image pipeline rebuilt')
