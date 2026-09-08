@@ -24,11 +24,12 @@ if(s.includes(shopMarker)&&!s.includes('collection-filter-bar')){
  s=s.replace(shopMarker,filters+shopMarker)
 }
 
-// Remove Shipping & Returns from the footer regardless of minor JSX formatting differences.
-s=s.replace(/<button[^>]*nav\(['\"]\/shipping-returns['\"]\)[^>]*>\s*Shipping\s*<\/button>\s*<br\s*\/?>/g,'')
-s=s.replace(/<a[^>]*href=['\"]\/shipping-returns['\"][^>]*>\s*Shipping\s*<\/a>\s*<br\s*\/?>/g,'')
-s=s.replace(/<button[^>]*nav\(['\"]\/shipping-returns['\"]\)[^>]*>\s*Shipping[^<]*<\/button>/g,'')
-s=s.replace(/<a[^>]*href=['\"]\/shipping-returns['\"][^>]*>\s*Shipping[^<]*<\/a>/g,'')
+// Remove every legacy Shipping / Shipping & Returns footer link, allowing for
+// capitalization and minor JSX formatting differences.
+s=s.replace(/<button[^>]*nav\(['\"]\/shipping-returns['\"]\)[^>]*>[^<]*shipping[^<]*<\/button>\s*<br\s*\/?>/gi,'')
+s=s.replace(/<a[^>]*href=['\"]\/shipping-returns['\"][^>]*>[^<]*shipping[^<]*<\/a>\s*<br\s*\/?>/gi,'')
+s=s.replace(/<button[^>]*nav\(['\"]\/shipping-returns['\"]\)[^>]*>[^<]*shipping[^<]*<\/button>/gi,'')
+s=s.replace(/<a[^>]*href=['\"]\/shipping-returns['\"][^>]*>[^<]*shipping[^<]*<\/a>/gi,'')
 
 fs.writeFileSync(file,s)
 console.log('Storefront enhancement patch applied')
