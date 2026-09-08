@@ -18,6 +18,10 @@ s=s.replace("className={'product-image-wrap '+(p.orientation==='portrait'?'portr
 s=s.replace("const [saving,setSaving]=useState(false);const [message,setMessage]=useState('');useEffect", "const [saving,setSaving]=useState(false);const [message,setMessage]=useState('');const emailVerified=!!user?.email_confirmed_at;useEffect")
 s=s.replace('<label>Email address<input type="email" value={email}', '<label>Email address <span className={emailVerified?"verification-status verified":"verification-status"}>{emailVerified?"✓ Verified":"Not verified"}</span><input type="email" value={email}')
 
+// Remove the redundant toolbar Filter control because the collection already
+// has the dedicated All / Landscape / Portrait / Limited Edition controls.
+s=s.replace(/<div className="filter-wrap">.*?<\/div><\/div><\/div><div className="shop-grid">/s, '</div></div><div className="shop-grid">')
+
 // Remove every legacy Shipping / Shipping & Returns footer link, allowing for
 // capitalization and minor JSX formatting differences.
 s=s.replace(/<button[^>]*nav\(['\"]\/shipping-returns['\"]\)[^>]*>[^<]*shipping[^<]*<\/button>\s*<br\s*\/?>/gi,'')
