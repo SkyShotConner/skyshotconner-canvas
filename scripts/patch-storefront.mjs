@@ -3,6 +3,10 @@ import fs from 'node:fs'
 const file='app/[[...slug]]/page.tsx'
 let s=fs.readFileSync(file,'utf8')
 
+// Ensure the generated storefront imports the Next.js pathname hook used by the navigation fix.
+s=s.replace("import { useRouter } from 'next/navigation'", "import { useRouter, usePathname } from 'next/navigation'")
+s=s.replace("import { useRouter, usePathname } from 'next/navigation'", "import { useRouter, usePathname } from 'next/navigation'")
+
 s=s.replace("const CANVAS_PRICES:Record<string,number>={A5:349,A4:449,A3:549,A2:749,A1:1099}\nconst CANVAS_SIZES=['A5','A4','A3','A2','A1']\nconst FRAME_PRICES:Record<string,number>={Unframed:0,Black:150,White:100,'Natural Wood':250}","const CANVAS_PRICES:Record<string,number>={A5:349,A4:449,A3:549,A2:749,A1:1099,A0:1799}\nconst CANVAS_SIZES=['A5','A4','A3','A2','A1','A0']")
 s=s.replace("function canvasPrice(size:string,frame:string){return (CANVAS_PRICES[size]||349)+(FRAME_PRICES[frame]||0)}","function canvasPrice(size:string,_frame:string){return CANVAS_PRICES[size]||349}")
 s=s.replace("[selectedSize,setSelectedSize]=useState('A4'),[selectedFrame,setSelectedFrame]=useState('Black')","[selectedSize,setSelectedSize]=useState('A4'),[selectedFrame,setSelectedFrame]=useState('Unframed')")
