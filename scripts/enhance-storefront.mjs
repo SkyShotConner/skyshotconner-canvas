@@ -28,15 +28,15 @@ s=s.replace("<Home nav={nav} products={products}/>", "<Home nav={nav} products={
 s=s.replace("function Home({nav,products}:{nav:(x:string)=>void;products:Product[]})", "function Home({nav,products,siteImages}:{nav:(x:string)=>void;products:Product[];siteImages:Record<string,string>})")
 s=s.replace("<About/>", "<About siteImages={siteImages}/>")
 
-// Replace the actual homepage fallback/editorial image references with editable site-image slots.
-s=s.replace("src={FALLBACK} alt=\"Harvard aircraft turning through golden sunset\"", "src={siteImage(siteImages,'home_hero',FALLBACK)} alt=\"Harvard aircraft turning through golden sunset\"")
-s=s.replace("image={editorial.commercial} eyebrow=\"01 / Modern aviation\"", "image={siteImage(siteImages,'home_commercial',editorial.commercial)} eyebrow=\"01 / Modern aviation\"")
-s=s.replace("image={editorial.military} eyebrow=\"02 / Power & precision\"", "image={siteImage(siteImages,'home_military',editorial.military)} eyebrow=\"02 / Power & precision\"")
-s=s.replace("image={editorial.historic} eyebrow=\"03 / Aviation heritage\"", "image={siteImage(siteImages,'home_historic',editorial.historic)} eyebrow=\"03 / Aviation heritage\"")
-s=s.replace("image={editorial.cockpit} eyebrow=\"04 / Where flight begins\"", "image={siteImage(siteImages,'home_cockpit',editorial.cockpit)} eyebrow=\"04 / Where flight begins\"")
-s=s.replace("<img src={FALLBACK} alt=\"Classic aircraft in cinematic light\"", "<img src={siteImage(siteImages,'home_editorial',FALLBACK)} alt=\"Classic aircraft in cinematic light\"")
+// The homepage source changes over time, so replace its entire function rather than relying on fragile image-string matches.
+const homeStart=s.indexOf('function Home(')
+const sceneStart=s.indexOf('function Scene(',homeStart)
+if(homeStart>=0&&sceneStart>homeStart){
+  const homeFn=`function Home({nav,products,siteImages}:{nav:(x:string)=>void;products:Product[];siteImages:Record<string,string>}){return <main><section className="hero"><img className="hero-img" src={siteImage(siteImages,'home_hero',FALLBACK)} alt="Harvard aircraft turning through golden sunset"/><div className="hero-copy"><div className="eyebrow">SkyShotConner Canvas</div><h1 className="display">THE ART<br/>OF FLIGHT.</h1><button className="hero-cta" onClick={()=>nav('/shop')}>Explore collection <ArrowUpRight size={16}/></button></div></section><Scene title="C O M M E R C I A L" image={siteImage(siteImages,'home_commercial',editorial.commercial)} eyebrow="01 / Modern aviation" nav={nav} href="/shop?category=Commercial"/><Scene title="M I L I T A R Y" image={siteImage(siteImages,'home_military',editorial.military)} eyebrow="02 / Power & precision" nav={nav} href="/shop?category=Military"/><Scene title="H I S T O R I C" image={siteImage(siteImages,'home_historic',editorial.historic)} eyebrow="03 / Aviation heritage" nav={nav} href="/shop?category=Historic"/><Scene title="C O C K P I T" image={siteImage(siteImages,'home_cockpit',editorial.cockpit)} eyebrow="04 / Where flight begins" nav={nav} href="/shop?category=Cockpit"/><section className="paper"><div className="container"><div className="editorial-feature"><div className="editorial-feature-copy"><div className="eyebrow">The collection</div><h2>Aircraft, frozen in time.</h2><p>Fine-art aviation photography printed on premium canvas and made to live with.</p><button className="text-link" onClick={()=>nav('/shop')}>View all works <ArrowUpRight size={16}/></button></div><img src={siteImage(siteImages,'home_editorial',FALLBACK)} alt="Classic aircraft in cinematic light"/></div></div></section><section className="icons-section"><div className="container"><div className="eyebrow">Icons of aviation</div><div className="icons-grid">{['747','Concorde','Spitfire','P-51','SR-71','A380','DC-3','F-14'].map((x)=><button key={x} onClick={()=>nav('/shop')} className="icon-name">{x}<ArrowUpRight size={14}/></button>)}</div></div></section></main>}`
+  s=s.slice(0,homeStart)+homeFn+s.slice(sceneStart)
+}
 
-// Robustly replace the entire About component regardless of its current prop signature.
+// Replace the About component regardless of its current prop signature.
 const aboutStart=s.indexOf('function About(')
 const simpleStart=s.indexOf('function SimplePage(',aboutStart)
 if(aboutStart>=0&&simpleStart>aboutStart){
