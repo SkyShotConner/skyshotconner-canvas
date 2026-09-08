@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import SiteImageManager from '../SiteImageManager'
-import '../site-images.css'
 
 export default function SiteImagesAdminPage(){
   const supabase = useMemo(() => createClient(), [])!
