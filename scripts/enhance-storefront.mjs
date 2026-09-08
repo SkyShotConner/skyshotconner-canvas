@@ -15,16 +15,13 @@ if(!s.includes('const router=useRouter()')){
 }
 s=s.replace("const nav=(to:string)=>{window.history.pushState({},'',to);setPath(to);setMenu(false);setSearchOpen(false);window.scrollTo(0,0)}", "const nav=(to:string)=>{router.push(to);setPath(to);setMenu(false);setSearchOpen(false);window.scrollTo(0,0)}")
 
-// Site-image state: inject once, directly after the Supabase client declaration.
+// Site-image state
 if(!s.includes('const [siteImages,setSiteImages]')){
   s=s.replace("const supabase=useMemo(()=>createClient(),[])", "const supabase=useMemo(()=>createClient(),[])\n const [siteImages,setSiteImages]=useState<Record<string,string>>({})")
 }
 
-// Site-image query: inject as a complete, independent effect. Never nest it inside another useEffect.
+// Site-image query as a standalone effect
 const siteImageEffect = "useEffect(()=>{if(!supabase)return;supabase.from('site_images').select('key,image_url').then(({data,error})=>{if(error)console.error('site_images load failed',error);else if(data)setSiteImages(Object.fromEntries(data.filter((x:any)=>x.image_url).map((x:any)=>[x.key,x.image_url])))});},[supabase])"
-
-// Remove any previously generated malformed/nested site-image effect if present.
-s=s.replace("useEffect(()=>{if(!supabase)return;supabase.from('site_images').select('key,image_url').then(({data,error})=>{if(error)console.error('site_images load failed',error);else if(data)setSiteImages(Object.fromEntries(data.filter((x:any)=>x.image_url).map((x:any)=>[x.key,x.image_url])))});useEffect(()=>{if(!supabase)return;", "useEffect(()=>{if(!supabase)return;")
 if(!s.includes("select('key,image_url')")){
   const anchor=" const [siteImages,setSiteImages]=useState<Record<string,string>>({})"
   s=s.replace(anchor, anchor+"\n "+siteImageEffect)
@@ -33,8 +30,11 @@ if(!s.includes("select('key,image_url')")){
 s=s.replace('<Home nav={nav} products={products}/>','<Home nav={nav} products={products} siteImages={siteImages}/>')
 s=s.replace('function Home({nav,products}:{nav:(x:string)=>void;products:Product[]})','function Home({nav,products,siteImages}:{nav:(x:string)=>void;products:Product[];siteImages:Record<string,string>})')
 s=s.replace('<About/>','<About siteImages={siteImages}/>')
+// Make About accept the siteImages prop. The component can ignore it safely until its custom images are used.
+s=s.replace('function About(){','function About({siteImages}:{siteImages:Record<string,string>}){')
+s=s.replace('function About({siteImages}:{siteImages:Record<string,string>}){','function About({siteImages}:{siteImages:Record<string,string>}){')
 
-// Replace the Home component cleanly, preserving the existing Scene component and everything after it.
+// Replace Home component cleanly, preserving the existing Scene component and everything after it.
 const hs=s.indexOf('function Home(')
 const ss=s.indexOf('function Scene(',hs)
 if(hs>=0&&ss>hs){
