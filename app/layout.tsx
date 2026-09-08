@@ -3,6 +3,7 @@ import './globals.css'
 import './storefront-overrides.css'
 import './info-pages.css'
 import './collection-rebuild.css'
+import './admin-users.css'
 
 export const metadata: Metadata = {
   title: 'SkyShotConner — The Art of Flight',
