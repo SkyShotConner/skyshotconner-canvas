@@ -3,20 +3,10 @@ import fs from 'node:fs'
 const file='app/[[...slug]]/page.tsx'
 let s=fs.readFileSync(file,'utf8')
 
-// Ensure the generated storefront always imports the navigation hooks it uses.
-if (s.includes("from 'next/navigation'")) {
-  s=s.replace(/import\s*\{([^}]*)\}\s*from\s*['"]next\/navigation['"]/, (m,names)=>{
-    const imports=names.split(',').map(x=>x.trim()).filter(Boolean)
-    if(!imports.includes('useRouter')) imports.push('useRouter')
-    if(!imports.includes('usePathname')) imports.push('usePathname')
-    return `import { ${imports.join(', ')} } from 'next/navigation'`
-  })
-} else {
-  s="import { useRouter, usePathname } from 'next/navigation'\n"+s
-}
-
-s=s.replace("import { useRouter } from 'next/navigation'", "import { useRouter, usePathname } from 'next/navigation'")
-s=s.replace("import { useRouter, usePathname } from 'next/navigation'", "import { useRouter, usePathname } from 'next/navigation'")
+// Guarantee the Next navigation hooks are imported AFTER the client directive.
+s=s.replace(/^'use client'\s*\n?/m, "'use client'\n\n")
+s=s.replace(/^import\s*\{[^}]*\}\s*from ['"]next\/navigation['"];?\s*\n?/m, '')
+s="'use client'\n\nimport { useRouter, usePathname } from 'next/navigation'\n"+s.replace(/^'use client'\s*\n?/m, '').replace(/^\s*\n/, '')
 
 s=s.replace("const CANVAS_PRICES:Record<string,number>={A5:349,A4:449,A3:549,A2:749,A1:1099}\nconst CANVAS_SIZES=['A5','A4','A3','A2','A1']\nconst FRAME_PRICES:Record<string,number>={Unframed:0,Black:150,White:100,'Natural Wood':250}","const CANVAS_PRICES:Record<string,number>={A5:349,A4:449,A3:549,A2:749,A1:1099,A0:1799}\nconst CANVAS_SIZES=['A5','A4','A3','A2','A1','A0']")
 s=s.replace("function canvasPrice(size:string,frame:string){return (CANVAS_PRICES[size]||349)+(FRAME_PRICES[frame]||0)}","function canvasPrice(size:string,_frame:string){return CANVAS_PRICES[size]||349}")
