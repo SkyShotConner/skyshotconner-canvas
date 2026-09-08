@@ -3,7 +3,6 @@ import fs from 'node:fs'
 const file='app/[[...slug]]/page.tsx'
 let s=fs.readFileSync(file,'utf8')
 
-// Use Next.js routing for real client-side navigation.
 s=s.replace("import { useEffect, useMemo, useState } from 'react'", "import { useEffect, useMemo, useState } from 'react'\nimport { useRouter } from 'next/navigation'")
 s=s.replace("export default function Site(){\n", "function siteImage(images:Record<string,string>,key:string,fallback:string){return images[key]||fallback}\n\nexport default function Site(){\n const router=useRouter()\n")
 s=s.replace("const nav=(to:string)=>{window.history.pushState({},'',to);setPath(to);setMenu(false);setSearchOpen(false);window.scrollTo(0,0)}", "const nav=(to:string)=>{router.push(to);setPath(to);setMenu(false);setSearchOpen(false);window.scrollTo(0,0)}")
@@ -22,7 +21,6 @@ s=s.replace(/<a[^>]*href=['\"]\/shipping-returns['\"][^>]*>[^<]*shipping[^<]*<\/
 s=s.replace(/<button[^>]*nav\(['\"]\/shipping-returns['\"]\)[^>]*>[^<]*shipping[^<]*<\/button>/gi,'')
 s=s.replace(/<a[^>]*href=['\"]\/shipping-returns['\"][^>]*>[^<]*shipping[^<]*<\/a>/gi,'')
 
-// Load editable website imagery from Supabase. Product imagery remains separate.
 s=s.replace("const [products,setProducts]=useState<Product[]>(demoProducts)", "const [products,setProducts]=useState<Product[]>(demoProducts),[siteImages,setSiteImages]=useState<Record<string,string>>({})")
 s=s.replace("useEffect(()=>{if(!supabase)return;supabase.from('products').select('id,name,slug,price,short_description,description,category_id,product_images(storage_path)').eq('is_active',true).then(({data})=>", "useEffect(()=>{if(!supabase)return;supabase.from('site_images').select('key,image_url').then(({data})=>{if(data)setSiteImages(Object.fromEntries(data.filter((x:any)=>x.image_url).map((x:any)=>[x.key,x.image_url])))});supabase.from('products').select('id,name,slug,price,short_description,description,category_id,product_images(storage_path)').eq('is_active',true).then(({data})=>")
 
@@ -37,8 +35,13 @@ s=s.replace("image={siteImage('home_historic',editorial.historic)}", "image={sit
 s=s.replace("image={siteImage('home_cockpit',editorial.cockpit)}", "image={siteImage(siteImages,'home_cockpit',editorial.cockpit)}")
 s=s.replace("src={siteImage('home_editorial',FALLBACK)}", "src={siteImage(siteImages,'home_editorial',FALLBACK)}")
 
-// Replace About image handling with the central Supabase image system.
-s=s.replace(/function About(?:\([^)]*\))?\{.*?\}function SimplePage/s, `function About({siteImages}:{siteImages:Record<string,string>}){return <main><section className="hero about-hero"><img className="hero-img" src={siteImage(siteImages,'about_hero',editorial.historic)} alt="SkyShotConner aviation story"/><div className="hero-copy"><div className="eyebrow">About SkyShotConner</div><h1 className="display">WHY<br/>WE FLY.</h1></div></section><section className="paper about-paper"><div className="container"><div className="about-story"><div className="editorial-copy"><div className="eyebrow">The photography</div><h2>Moments become objects.</h2><p>SkyShotConner turns the split second of an aircraft in light, motion and atmosphere into collectible wall art. The aim is simple: make aviation feel as powerful in a room as it feels in the sky.</p></div><img src={siteImage(siteImages,'about_main',FALLBACK)} alt="SkyShotConner aviation photography"/></div><div className="about-story second"><img src={siteImage(siteImages,'about_secondary',editorial.military)} alt="Aviation photography"/><div className="editorial-copy"><div className="eyebrow">Your story</div><h2>Built around the aircraft you love.</h2><p>Your photography can be replaced from the Website Images section of the admin panel.</p></div></div></div></section></main>}function SimplePage`)
+// Robustly replace the entire About component regardless of its current prop signature.
+const aboutStart=s.indexOf('function About(')
+const simpleStart=s.indexOf('function SimplePage(',aboutStart)
+if(aboutStart>=0&&simpleStart>aboutStart){
+  const aboutFn=`function About({siteImages}:{siteImages:Record<string,string>}){return <main><section className="hero about-hero"><img className="hero-img" src={siteImage(siteImages,'about_hero',editorial.historic)} alt="SkyShotConner aviation story"/><div className="hero-copy"><div className="eyebrow">About SkyShotConner</div><h1 className="display">WHY<br/>WE FLY.</h1></div></section><section className="paper about-paper"><div className="container"><div className="about-story"><div className="editorial-copy"><div className="eyebrow">The photography</div><h2>Moments become objects.</h2><p>SkyShotConner turns the split second of an aircraft in light, motion and atmosphere into collectible wall art. The aim is simple: make aviation feel as powerful in a room as it feels in the sky.</p></div><img src={siteImage(siteImages,'about_main',FALLBACK)} alt="SkyShotConner aviation photography"/></div><div className="about-story second"><img src={siteImage(siteImages,'about_secondary',editorial.military)} alt="Aviation photography"/><div className="editorial-copy"><div className="eyebrow">Your story</div><h2>Built around the aircraft you love.</h2><p>Your photography can be replaced from the Website Images section of the admin panel.</p></div></div></div></section></main>}`
+  s=s.slice(0,aboutStart)+aboutFn+s.slice(simpleStart)
+}
 
 fs.writeFileSync(file,s)
 console.log('Storefront enhancement patch applied')
