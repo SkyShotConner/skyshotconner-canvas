@@ -33,8 +33,35 @@ if(!/function siteImage\(/.test(s)){
   s=s.replace(anchor,"function siteImage(images:Record<string,string>,key:string,fallback:string){return images[key]||fallback}\n"+anchor)
 }
 
-// If the image state was not inserted by the enhancer, add the minimal state/effect
-// required by the generated Home component.
+// The image preloader must never hide the entire homepage. A Supabase/network
+// request should be allowed to fail without making the page permanently blank.
+s=s.replace(/\{if\(!siteImagesReady\)return <main className="site-loading" aria-label="Loading SkyShotConner"\/>;/g,'')
+
+// Keep the loading state as a harmless CSS class if older generated markup still
+// references it; it is no longer used as a render gate.
+s=s.replace(/className="site-loading"/g,'className="site-loading site-loading-disabled"')
+
+// Product data needs orientation so the collection can deliberately alternate
+// large landscape cards and narrower portrait cards without stretching artwork.
+s=s.replace(
+  "type Product={id:string;name:string;slug:string;price:number;short_description?:string|null;description?:string|null;category?:string|null;images:string[]}",
+  "type Product={id:string;name:string;slug:string;price:number;short_description?:string|null;description?:string|null;category?:string|null;images:string[];orientation?:'landscape'|'portrait';limited_edition?:boolean}"
+)
+s=s.replace(
+  "supabase.from('products').select('id,name,slug,price,short_description,description,category_id,product_images(storage_path)').eq('is_active',true)",
+  "supabase.from('products').select('id,name,slug,price,short_description,description,category_id,orientation,limited_edition,product_images(storage_path)').eq('is_active',true)"
+)
+s=s.replace(
+  "images:(p.product_images||[]).map((x:any)=>x.storage_path),price:349",
+  "images:(p.product_images||[]).map((x:any)=>x.storage_path),orientation:p.orientation==='portrait'?'portrait':'landscape',limited_edition:!!p.limited_edition,price:Number(p.price)||349"
+)
+
+// Product cards carry the orientation class used by the collection grid CSS.
+s=s.replace(
+  "<div className=\"product-image-wrap\"><img src={imgFor(p)}",
+  "<div className={'product-image-wrap '+(p.orientation==='portrait'?'portrait':'landscape')}><img src={imgFor(p)}"
+)
+
 if(/siteImages=\{siteImages\}/.test(s) && !/\[siteImages,setSiteImages\]/.test(s)){
   const anchor="const [products,setProducts]=useState<Product[]>(demoProducts)"
   if(!s.includes(anchor)) throw new Error('Unable to locate storefront product state')
