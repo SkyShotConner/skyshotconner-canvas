@@ -3,46 +3,29 @@ import fs from 'node:fs'
 const file='app/[[...slug]]/page.tsx'
 let s=fs.readFileSync(file,'utf8')
 
-// Keep the client directive first, then provide the navigation hooks exactly once.
 s=s.replace(/^'use client'\s*\n?/m,'')
 s=s.replace(/^import\s*\{[^}]*\}\s*from ['"]next\/navigation['"];?\s*\n?/m,'')
 s="'use client'\n\nimport { useRouter, usePathname } from 'next/navigation'\n"+s.replace(/^\s*\n/,'')
 
-// The generated storefront must always have a router and a pathname.
 const pathPattern=/const \[path,setPath\]=useState\(typeof window!=='undefined'\?window\.location\.pathname:'\/'\)/
-if(pathPattern.test(s)){
-  s=s.replace(pathPattern,"const router=useRouter(),path=usePathname()")
-}else if(!/const router=useRouter\(\),path=usePathname\(\)/.test(s)){
-  throw new Error('Unable to establish App Router navigation state')
-}
+if(pathPattern.test(s)) s=s.replace(pathPattern,"const router=useRouter(),path=usePathname()")
+else if(!/const router=useRouter\(\),path=usePathname\(\)/.test(s)) throw new Error('Unable to establish App Router navigation state')
 
-// Remove the obsolete popstate listener left by the legacy client-side router.
 s=s.replace(/\s*useEffect\(\(\)=>\{const on=\(\)=>setPath\(window\.location\.pathname\);window\.addEventListener\('popstate',on\);return\(\)=>window\.removeEventListener\('popstate',on\)\},\[\]\)/,'')
-
-// Ensure navigation uses Next.js routing instead of mutating browser history.
 s=s.replace(/const nav=\(to:string\)=>\{window\.history\.pushState\(\{\},'',to\);setPath\(to\);setMenu\(false\);setSearchOpen\(false\);window\.scrollTo\(0,0\)\}/,"const nav=(to:string)=>{router.push(to);setMenu(false);setSearchOpen(false);window.scrollTo(0,0)}")
 s=s.replace(/const nav=\(to:string\)=>\{router\.push\(to\);setMenu\(false\);setSearchOpen\(false\);window\.scrollTo\(0,0\)\}/,"const nav=(to:string)=>{router.push(to);setMenu(false);setSearchOpen(false);window.scrollTo(0,0)}")
 
-// Home is generated with the site-image props. Keep its call site in sync.
 s=s.replace(/<Home\s+nav=\{nav\}\s+products=\{products\}(?:\s+siteImages=\{siteImages\}\s+siteImagesReady=\{siteImagesReady\})?\s*\/>/g,'<Home nav={nav} products={products} siteImages={siteImages} siteImagesReady={siteImagesReady}/>')
 
-// Ensure the site image helper exists before Home/Scene use it.
 if(!/function siteImage\(/.test(s)){
   const anchor="function imgFor(p:Product){"
   if(!s.includes(anchor)) throw new Error('Unable to locate image helper anchor')
   s=s.replace(anchor,"function siteImage(images:Record<string,string>,key:string,fallback:string){return images[key]||fallback}\n"+anchor)
 }
 
-// The image preloader must never hide the entire homepage. A Supabase/network
-// request should be allowed to fail without making the page permanently blank.
+// Never make the entire homepage depend on the site_images request completing.
 s=s.replace(/\{if\(!siteImagesReady\)return <main className="site-loading" aria-label="Loading SkyShotConner"\/>;/g,'')
 
-// Keep the loading state as a harmless CSS class if older generated markup still
-// references it; it is no longer used as a render gate.
-s=s.replace(/className="site-loading"/g,'className="site-loading site-loading-disabled"')
-
-// Product data needs orientation so the collection can deliberately alternate
-// large landscape cards and narrower portrait cards without stretching artwork.
 s=s.replace(
   "type Product={id:string;name:string;slug:string;price:number;short_description?:string|null;description?:string|null;category?:string|null;images:string[]}",
   "type Product={id:string;name:string;slug:string;price:number;short_description?:string|null;description?:string|null;category?:string|null;images:string[];orientation?:'landscape'|'portrait';limited_edition?:boolean}"
@@ -56,11 +39,22 @@ s=s.replace(
   "images:(p.product_images||[]).map((x:any)=>x.storage_path),orientation:p.orientation==='portrait'?'portrait':'landscape',limited_edition:!!p.limited_edition,price:Number(p.price)||349"
 )
 
-// Product cards carry the orientation class used by the collection grid CSS.
 s=s.replace(
   "<div className=\"product-image-wrap\"><img src={imgFor(p)}",
   "<div className={'product-image-wrap '+(p.orientation==='portrait'?'portrait':'landscape')}><img src={imgFor(p)}"
 )
+
+// Deterministic editorial sequence: 2 landscape cards, then 3 portrait cards,
+// repeating. Products are grouped by their saved orientation so the artwork is
+// never stretched into the wrong card shape.
+if(!/function orderCollectionProducts\(/.test(s)){
+  const anchor='function Shop('
+  const helper="function orderCollectionProducts(products:Product[]){const landscape=products.filter(p=>p.orientation!=='portrait'),portrait=products.filter(p=>p.orientation==='portrait');const out:Product[]=[];let l=0,r=0;while(l<landscape.length||r<portrait.length){for(let i=0;i<2&&l<landscape.length;i++)out.push(landscape[l++]);for(let i=0;i<3&&r<portrait.length;i++)out.push(portrait[r++]);}return out}\n"
+  if(!s.includes(anchor)) throw new Error('Unable to locate Shop component')
+  s=s.replace(anchor,helper+anchor)
+}
+s=s.replace("function Shop({products,nav,query,setQuery,filter,setFilter,filterOpen,setFilterOpen,categories}:{products:Product[];nav:(x:string)=>void;query:string;setQuery:(x:string)=>void;filter:string;setFilter:(x:string)=>void;filterOpen:boolean;setFilterOpen:(x:boolean)=>void;categories:string[]}){return <main", "function Shop({products,nav,query,setQuery,filter,setFilter,filterOpen,setFilterOpen,categories}:{products:Product[];nav:(x:string)=>void;query:string;setQuery:(x:string)=>void;filter:string;setFilter:(x:string)=>void;filterOpen:boolean;setFilterOpen:(x:boolean)=>void;categories:string[]}){const orderedProducts=orderCollectionProducts(products);return <main")
+s=s.replace('{products.length?products.map(p=><ProductCard key={p.id} p={p} nav={nav}/>:<div className="notice empty-search">','{orderedProducts.length?orderedProducts.map(p=><ProductCard key={p.id} p={p} nav={nav}/>:<div className="notice empty-search">')
 
 if(/siteImages=\{siteImages\}/.test(s) && !/\[siteImages,setSiteImages\]/.test(s)){
   const anchor="const [products,setProducts]=useState<Product[]>(demoProducts)"
