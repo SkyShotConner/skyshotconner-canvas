@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import './storefront-overrides.css'
+import './info-pages.css'
 
 export const metadata: Metadata = {
   title: 'SkyShotConner — The Art of Flight',
