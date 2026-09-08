@@ -3,10 +3,10 @@ import fs from 'node:fs'
 const file='app/[[...slug]]/page.tsx'
 let s=fs.readFileSync(file,'utf8')
 
-// Stable App Router navigation: derive the route from Next instead of maintaining a second pathname state.
+// Stable App Router navigation: keep the router for push() and derive the current route from Next.
 s=s.replace("import { useRouter } from 'next/navigation'", "import { useRouter, usePathname } from 'next/navigation'")
-s=s.replace("const [path,setPath]=useState(typeof window!=='undefined'?window.location.pathname:'/'),[menu,setMenu]=useState(false)", "const path=usePathname(),[menu,setMenu]=useState(false)")
-s=s.replace("const [path,setPath]=useState(typeof window!=='undefined'?window.location.pathname:'/'),", "const path=usePathname(),")
+s=s.replace("const [path,setPath]=useState(typeof window!=='undefined'?window.location.pathname:'/'),[menu,setMenu]=useState(false)", "const router=useRouter(),path=usePathname(),[menu,setMenu]=useState(false)")
+s=s.replace("const [path,setPath]=useState(typeof window!=='undefined'?window.location.pathname:'/'),", "const router=useRouter(),path=usePathname(),")
 s=s.replace(" useEffect(()=>{const on=()=>setPath(window.location.pathname);window.addEventListener('popstate',on);return()=>window.removeEventListener('popstate',on)},[])", "")
 s=s.replace("const nav=(to:string)=>{window.history.pushState({},'',to);setPath(to);setMenu(false);setSearchOpen(false);window.scrollTo(0,0)}", "const nav=(to:string)=>{router.push(to);setMenu(false);setSearchOpen(false);window.scrollTo(0,0)}")
 
