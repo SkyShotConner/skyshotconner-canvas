@@ -10,6 +10,9 @@ const SLOTS = [
   ['home_historic', 'Historic Section', 'Historic aviation section image.'],
   ['home_cockpit', 'Cockpit Section', 'Cockpit / flight deck section image.'],
   ['home_editorial', 'Homepage Editorial Image', 'The editorial image above the selected works section.'],
+  ['about_hero', 'About Hero', 'The large image at the top of the About page.'],
+  ['about_main', 'About Main Image', 'The first editorial image on the About page.'],
+  ['about_secondary', 'About Secondary Image', 'The second editorial image on the About page.'],
 ] as const
 
 type SiteImage = { key: string; label: string; image_url: string | null; storage_path: string | null }
@@ -42,19 +45,25 @@ export default function SiteImageManager(){
     if(upload.error){ setMessage(upload.error.message); setBusy(null); return }
 
     const publicUrl = supabase.storage.from('site-images').getPublicUrl(path).data.publicUrl
-    const { error } = await supabase.from('site_images').update({ image_url: publicUrl, storage_path: path, updated_at: new Date().toISOString() }).eq('key', slot)
+    const { error } = await supabase.from('site_images').upsert({
+      key: slot,
+      label: SLOTS.find(x => x[0] === slot)?.[1] || slot,
+      image_url: publicUrl,
+      storage_path: path,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'key' })
     if(error){ await supabase.storage.from('site-images').remove([path]); setMessage(error.message); setBusy(null); return }
 
-    if(old?.storage_path) await supabase.storage.from('site-images').remove([old.storage_path])
+    if(old?.storage_path && old.storage_path !== path) await supabase.storage.from('site-images').remove([old.storage_path])
     setFiles(f => ({...f, [slot]: null}))
     await load()
-    setMessage('Website image updated. The change will appear after the site rebuilds/deploys.')
+    setMessage('Website image updated successfully. Refresh the storefront to see it.')
     setBusy(null)
   }
 
   return <section className="admin-card site-image-manager">
     <div className="admin-card-head">
-      <div><span className="eyebrow">Website imagery</span><h2>Static images</h2><p>Replace the images used throughout the website without editing code.</p></div>
+      <div><span className="eyebrow">Website imagery</span><h2>Static images</h2><p>Replace the images used throughout the website without editing code. Product images are managed separately.</p></div>
       <button className="admin-button secondary-admin" onClick={load}>Refresh</button>
     </div>
     <div className="site-image-grid">
