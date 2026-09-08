@@ -26,6 +26,13 @@ s=s.replace(/const nav=\(to:string\)=>\{router\.push\(to\);setMenu\(false\);setS
 // Home is generated with the site-image props. Keep its call site in sync.
 s=s.replace(/<Home\s+nav=\{nav\}\s+products=\{products\}(?:\s+siteImages=\{siteImages\}\s+siteImagesReady=\{siteImagesReady\})?\s*\/>/g,'<Home nav={nav} products={products} siteImages={siteImages} siteImagesReady={siteImagesReady}/>')
 
+// Ensure the site image helper exists before Home/Scene use it.
+if(!/function siteImage\(/.test(s)){
+  const anchor="function imgFor(p:Product){"
+  if(!s.includes(anchor)) throw new Error('Unable to locate image helper anchor')
+  s=s.replace(anchor,"function siteImage(images:Record<string,string>,key:string,fallback:string){return images[key]||fallback}\n"+anchor)
+}
+
 // If the image state was not inserted by the enhancer, add the minimal state/effect
 // required by the generated Home component.
 if(/siteImages=\{siteImages\}/.test(s) && !/\[siteImages,setSiteImages\]/.test(s)){
@@ -35,7 +42,7 @@ if(/siteImages=\{siteImages\}/.test(s) && !/\[siteImages,setSiteImages\]/.test(s
 }
 
 if(/siteImages=\{siteImages\}/.test(s) && !/siteImagesReady/.test(s.split('const subtotal=')[0])){
-  const anchor=' useEffect(()=>{if(!supabase)return;supabase.from(\'products\')'
+  const anchor=" useEffect(()=>{if(!supabase)return;supabase.from('products')"
   const pos=s.indexOf(anchor)
   if(pos<0) throw new Error('Unable to locate storefront product effect')
   const effect=" useEffect(()=>{if(!supabase){setSiteImagesReady(true);return}supabase.from('site_images').select('key,image_url').then(async({data,error})=>{if(error){console.error('site_images load failed',error);setSiteImagesReady(true);return}const images=Object.fromEntries((data||[]).filter((x:any)=>x.image_url).map((x:any)=>[x.key,x.image_url]));setSiteImages(images);await Promise.all(Object.values(images).map((src:any)=>new Promise<void>(resolve=>{const im=new Image();im.onload=()=>resolve();im.onerror=()=>resolve();im.src=src})));setSiteImagesReady(true)});},[supabase])\n"
