@@ -8,7 +8,7 @@ const SIZES = [['A5',349],['A4',449],['A3',549],['A2',749],['A1',1099],['A0',179
 type Product = { id:string; name:string; slug:string; description:string|null; short_description:string|null; price:number; compare_at_price:number|null; stock:number; is_active:boolean; is_featured:boolean; image?:string|null }
 
 export default function AdminPage(){
- const supabase=useMemo(()=>createClient(),[])
+ const supabase=useMemo(()=>createClient(),[])!
  const [user,setUser]=useState<any>(null),[isAdmin,setIsAdmin]=useState(false),[checking,setChecking]=useState(true)
  const [products,setProducts]=useState<Product[]>([]),[selected,setSelected]=useState<Product|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState('')
  const [showNew,setShowNew]=useState(false),[newProduct,setNewProduct]=useState({name:'',slug:'',short_description:'',description:'',price:349,stock:1}),[newImage,setNewImage]=useState<File|null>(null),[imageFile,setImageFile]=useState<File|null>(null)
