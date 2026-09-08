@@ -17,5 +17,7 @@ if(s.includes(shopMarker)&&!s.includes('collection-filter-bar')){
  s=s.replace(shopMarker,filters+shopMarker)
 }
 
+s=s.replace('<button onClick={()=>nav(\'/shipping-returns\')}>Shipping</button><br/>','')
+
 fs.writeFileSync(file,s)
 console.log('Storefront enhancement patch applied')
