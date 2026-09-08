@@ -3,7 +3,18 @@ import fs from 'node:fs'
 const file='app/[[...slug]]/page.tsx'
 let s=fs.readFileSync(file,'utf8')
 
-// Ensure the generated storefront imports the Next.js pathname hook used by the navigation fix.
+// Ensure the generated storefront always imports the navigation hooks it uses.
+if (s.includes("from 'next/navigation'")) {
+  s=s.replace(/import\s*\{([^}]*)\}\s*from\s*['"]next\/navigation['"]/, (m,names)=>{
+    const imports=names.split(',').map(x=>x.trim()).filter(Boolean)
+    if(!imports.includes('useRouter')) imports.push('useRouter')
+    if(!imports.includes('usePathname')) imports.push('usePathname')
+    return `import { ${imports.join(', ')} } from 'next/navigation'`
+  })
+} else {
+  s="import { useRouter, usePathname } from 'next/navigation'\n"+s
+}
+
 s=s.replace("import { useRouter } from 'next/navigation'", "import { useRouter, usePathname } from 'next/navigation'")
 s=s.replace("import { useRouter, usePathname } from 'next/navigation'", "import { useRouter, usePathname } from 'next/navigation'")
 
