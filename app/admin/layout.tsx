@@ -1,4 +1,5 @@
 import './admin-nav.css'
+import './site-images.css'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return <>
