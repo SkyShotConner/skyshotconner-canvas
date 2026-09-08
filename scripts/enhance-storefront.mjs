@@ -33,13 +33,20 @@ s=s.replace(/<a[^>]*href=['\"]\/shipping-returns['\"][^>]*>[^<]*shipping[^<]*<\/
 // homepage photography without changing source code.
 s=s.replace("const [products,setProducts]=useState<Product[]>(demoProducts)", "const [products,setProducts]=useState<Product[]>(demoProducts),[siteImages,setSiteImages]=useState<Record<string,string>>({})")
 s=s.replace("useEffect(()=>{if(!supabase)return;supabase.from('products').select('id,name,slug,price,short_description,description,category_id,product_images(storage_path)').eq('is_active',true).then(({data})=>", "useEffect(()=>{if(!supabase)return;supabase.from('site_images').select('key,image_url').then(({data})=>{if(data)setSiteImages(Object.fromEntries(data.filter((x:any)=>x.image_url).map((x:any)=>[x.key,x.image_url])))});supabase.from('products').select('id,name,slug,price,short_description,description,category_id,product_images(storage_path)').eq('is_active',true).then(({data})=>")
-s=s.replace("const nav=(to:string)=>", "const siteImage=(key:string,fallback:string)=>siteImages[key]||fallback\n const nav=(to:string)=>")
-s=s.replace("<img className=\"hero-img\" src={FALLBACK}", "<img className=\"hero-img\" src={siteImage('home_hero',FALLBACK)}")
-s=s.replace("<Scene title=\"C O M M E R C I A L\" image={editorial.commercial}", "<Scene title=\"C O M M E R C I A L\" image={siteImage('home_commercial',editorial.commercial)}")
-s=s.replace("<Scene title=\"M I L I T A R Y\" image={editorial.military}", "<Scene title=\"M I L I T A R Y\" image={siteImage('home_military',editorial.military)}")
-s=s.replace("<Scene title=\"H I S T O R I C\" image={editorial.historic}", "<Scene title=\"H I S T O R I C\" image={siteImage('home_historic',editorial.historic)}")
-s=s.replace("<Scene title=\"C O C K P I T\" image={editorial.cockpit}", "<Scene title=\"C O C K P I T\" image={siteImage('home_cockpit',editorial.cockpit)}")
-s=s.replace("<img src={FALLBACK} alt=\"Classic aircraft in cinematic light\"", "<img src={siteImage('home_editorial',FALLBACK)} alt=\"Classic aircraft in cinematic light\"")
+
+// Keep the website-image resolver outside Home so Home can use it safely.
+s=s.replace("const nav=(to:string)=>", "const siteImage=(images:Record<string,string>,key:string,fallback:string)=>images[key]||fallback\n const nav=(to:string)=>")
+
+// Pass the loaded site images into the Home component.
+s=s.replace("<Home nav={nav} products={products}/>", "<Home nav={nav} products={products} siteImages={siteImages}/>")
+s=s.replace("function Home({nav,products}:{nav:(x:string)=>void;products:Product[]})", "function Home({nav,products,siteImages}:{nav:(x:string)=>void;products:Product[];siteImages:Record<string,string>})")
+
+s=s.replace("src={siteImage('home_hero',FALLBACK)}", "src={siteImage(siteImages,'home_hero',FALLBACK)}")
+s=s.replace("image={siteImage('home_commercial',editorial.commercial)}", "image={siteImage(siteImages,'home_commercial',editorial.commercial)}")
+s=s.replace("image={siteImage('home_military',editorial.military)}", "image={siteImage(siteImages,'home_military',editorial.military)}")
+s=s.replace("image={siteImage('home_historic',editorial.historic)}", "image={siteImage(siteImages,'home_historic',editorial.historic)}")
+s=s.replace("image={siteImage('home_cockpit',editorial.cockpit)}", "image={siteImage(siteImages,'home_cockpit',editorial.cockpit)}")
+s=s.replace("src={siteImage('home_editorial',FALLBACK)}", "src={siteImage(siteImages,'home_editorial',FALLBACK)}")
 
 fs.writeFileSync(file,s)
 console.log('Storefront enhancement patch applied')
