@@ -1,13 +1,4 @@
 import Link from 'next/link'
-
-const faqs=[
- ['What sizes are available?','SkyShotConner canvas artwork is available in A5, A4, A3, A2, A1 and A0 sizes.'],
- ['Are the canvases framed?','No. The current collection is sold as unframed canvas artwork, ready for you to display in the frame or presentation style you prefer.'],
- ['How much is delivery?','Nationwide South African delivery is R95 per order.'],
- ['Are artworks made to order?','Yes. Our canvases are produced to order, which means we do not rely on holding finished canvas stock.'],
- ['How do I place an order?','Choose an artwork, select your canvas size, add it to your bag and continue through checkout.'],
- ['Can I ask about an aircraft or photograph?','Absolutely. If you are looking for a particular aircraft, registration or photograph, contact us and we will let you know what is available.'],
- ['How can I contact SkyShotConner?','Email conneraviation18@gmail.com for customer support, artwork questions and collaborations.']
-]
-
-export default function FAQPage(){return <main className="info-page container"><div className="info-hero"><div className="eyebrow">SkyShotConner / FAQ</div><h1 className="page-title">QUESTIONS.<br/>ANSWERED.</h1><p>Everything you need to know before bringing a piece of aviation home.</p></div><section className="faq-list">{faqs.map(([q,a])=><details className="faq-item" key={q}><summary>{q}<span>+</span></summary><p>{a}</p></details>)}</section><div className="info-cta"><p>Still have a question?</p><Link className="primary" href="/contact">Contact us ↗</Link></div></main>}
+import InfoShell from '@/app/components/InfoShell'
+const faqs=[['What sizes are available?','SkyShotConner canvas artwork is available in A5, A4, A3, A2, A1 and A0 sizes.'],['Are the canvases framed?','No. The current collection is sold as unframed canvas artwork, ready for you to display in the frame or presentation style you prefer.'],['How much is delivery?','Nationwide South African delivery is R95 per order.'],['Are artworks made to order?','Yes. Our canvases are produced to order, which means we do not rely on holding finished canvas stock.'],['How do I place an order?','Choose an artwork, select your canvas size, add it to your bag and continue through checkout.'],['Can I ask about an aircraft or photograph?','Absolutely. If you are looking for a particular aircraft, registration or photograph, contact us and we will let you know what is available.'],['How can I contact SkyShotConner?','Email conneraviation18@gmail.com for customer support, artwork questions and collaborations.']]
+export default function FAQPage(){return <InfoShell><main className="info-page container"><div className="info-hero"><div className="eyebrow">SkyShotConner / FAQ</div><h1 className="page-title">QUESTIONS.<br/>ANSWERED.</h1><p>Everything you need to know before bringing a piece of aviation home.</p></div><section className="faq-list">{faqs.map(([q,a])=><details className="faq-item" key={q}><summary>{q}<span>+</span></summary><p>{a}</p></details>)}</section><div className="info-cta"><p>Still have a question?</p><Link className="primary" href="/contact">Contact us ↗</Link></div></main></InfoShell>}
