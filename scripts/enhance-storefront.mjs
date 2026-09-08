@@ -22,18 +22,19 @@ s=s.replace(/<button[^>]*nav\(['\"]\/shipping-returns['\"]\)[^>]*>[^<]*shipping[
 s=s.replace(/<a[^>]*href=['\"]\/shipping-returns['\"][^>]*>[^<]*shipping[^<]*<\/a>/gi,'')
 
 s=s.replace("const [products,setProducts]=useState<Product[]>(demoProducts)", "const [products,setProducts]=useState<Product[]>(demoProducts),[siteImages,setSiteImages]=useState<Record<string,string>>({})")
-s=s.replace("useEffect(()=>{if(!supabase)return;supabase.from('products').select('id,name,slug,price,short_description,description,category_id,product_images(storage_path)').eq('is_active',true).then(({data})=>", "useEffect(()=>{if(!supabase)return;supabase.from('site_images').select('key,image_url').then(({data})=>{if(data)setSiteImages(Object.fromEntries(data.filter((x:any)=>x.image_url).map((x:any)=>[x.key,x.image_url])))});supabase.from('products').select('id,name,slug,price,short_description,description,category_id,product_images(storage_path)').eq('is_active',true).then(({data})=>")
+s=s.replace("useEffect(()=>{if(!supabase)return;supabase.from('products').select('id,name,slug,price,short_description,description,category_id,product_images(storage_path)').eq('is_active',true).then(({data})=>", "useEffect(()=>{if(!supabase)return;supabase.from('site_images').select('key,image_url').then(({data,error})=>{if(error)console.error('site_images load failed',error);else if(data)setSiteImages(Object.fromEntries(data.filter((x:any)=>x.image_url).map((x:any)=>[x.key,x.image_url])))});supabase.from('products').select('id,name,slug,price,short_description,description,category_id,product_images(storage_path)').eq('is_active',true).then(({data})=>")
 
 s=s.replace("<Home nav={nav} products={products}/>", "<Home nav={nav} products={products} siteImages={siteImages}/>")
 s=s.replace("function Home({nav,products}:{nav:(x:string)=>void;products:Product[]})", "function Home({nav,products,siteImages}:{nav:(x:string)=>void;products:Product[];siteImages:Record<string,string>})")
 s=s.replace("<About/>", "<About siteImages={siteImages}/>")
 
-s=s.replace("src={siteImage('home_hero',FALLBACK)}", "src={siteImage(siteImages,'home_hero',FALLBACK)}")
-s=s.replace("image={siteImage('home_commercial',editorial.commercial)}", "image={siteImage(siteImages,'home_commercial',editorial.commercial)}")
-s=s.replace("image={siteImage('home_military',editorial.military)}", "image={siteImage(siteImages,'home_military',editorial.military)}")
-s=s.replace("image={siteImage('home_historic',editorial.historic)}", "image={siteImage(siteImages,'home_historic',editorial.historic)}")
-s=s.replace("image={siteImage('home_cockpit',editorial.cockpit)}", "image={siteImage(siteImages,'home_cockpit',editorial.cockpit)}")
-s=s.replace("src={siteImage('home_editorial',FALLBACK)}", "src={siteImage(siteImages,'home_editorial',FALLBACK)}")
+// Replace the actual homepage fallback/editorial image references with editable site-image slots.
+s=s.replace("src={FALLBACK} alt=\"Harvard aircraft turning through golden sunset\"", "src={siteImage(siteImages,'home_hero',FALLBACK)} alt=\"Harvard aircraft turning through golden sunset\"")
+s=s.replace("image={editorial.commercial} eyebrow=\"01 / Modern aviation\"", "image={siteImage(siteImages,'home_commercial',editorial.commercial)} eyebrow=\"01 / Modern aviation\"")
+s=s.replace("image={editorial.military} eyebrow=\"02 / Power & precision\"", "image={siteImage(siteImages,'home_military',editorial.military)} eyebrow=\"02 / Power & precision\"")
+s=s.replace("image={editorial.historic} eyebrow=\"03 / Aviation heritage\"", "image={siteImage(siteImages,'home_historic',editorial.historic)} eyebrow=\"03 / Aviation heritage\"")
+s=s.replace("image={editorial.cockpit} eyebrow=\"04 / Where flight begins\"", "image={siteImage(siteImages,'home_cockpit',editorial.cockpit)} eyebrow=\"04 / Where flight begins\"")
+s=s.replace("<img src={FALLBACK} alt=\"Classic aircraft in cinematic light\"", "<img src={siteImage(siteImages,'home_editorial',FALLBACK)} alt=\"Classic aircraft in cinematic light\"")
 
 // Robustly replace the entire About component regardless of its current prop signature.
 const aboutStart=s.indexOf('function About(')
