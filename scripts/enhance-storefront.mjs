@@ -3,6 +3,13 @@ import fs from 'node:fs'
 const file='app/[[...slug]]/page.tsx'
 let s=fs.readFileSync(file,'utf8')
 
+// Use Next.js routing for real client-side navigation. This prevents the
+// catch-all storefront page from rendering a placeholder when navigating to
+// dedicated routes such as /contact, /faq, /terms and /privacy.
+s=s.replace("import { useEffect, useMemo, useState } from 'react'", "import { useEffect, useMemo, useState } from 'react'\nimport { useRouter } from 'next/navigation'")
+s=s.replace("export default function Site(){\n", "export default function Site(){\n const router=useRouter()\n")
+s=s.replace("const nav=(to:string)=>{window.history.pushState({},'',to);setPath(to);setMenu(false);setSearchOpen(false);window.scrollTo(0,0)}", "const nav=(to:string)=>{router.push(to);setPath(to);setMenu(false);setSearchOpen(false);window.scrollTo(0,0)}")
+
 s=s.replace("orientation?:'portrait'|'landscape';images:string[]","orientation?:'portrait'|'landscape';limited_edition?:boolean;images:string[]")
 s=s.replace("category_id,orientation,product_images(storage_path,sort_order,is_primary)","category_id,orientation,limited_edition,product_images(storage_path,sort_order,is_primary)")
 s=s.replace("orientation:p.orientation||'landscape',images:","orientation:p.orientation||'landscape',limited_edition:!!p.limited_edition,images:")
@@ -17,7 +24,11 @@ if(s.includes(shopMarker)&&!s.includes('collection-filter-bar')){
  s=s.replace(shopMarker,filters+shopMarker)
 }
 
-s=s.replace('<button onClick={()=>nav(\'/shipping-returns\')}>Shipping</button><br/>','')
+// Remove Shipping & Returns from the footer regardless of minor JSX formatting differences.
+s=s.replace(/<button[^>]*nav\(['\"]\/shipping-returns['\"]\)[^>]*>\s*Shipping\s*<\/button>\s*<br\s*\/?>/g,'')
+s=s.replace(/<a[^>]*href=['\"]\/shipping-returns['\"][^>]*>\s*Shipping\s*<\/a>\s*<br\s*\/?>/g,'')
+s=s.replace(/<button[^>]*nav\(['\"]\/shipping-returns['\"]\)[^>]*>\s*Shipping[^<]*<\/button>/g,'')
+s=s.replace(/<a[^>]*href=['\"]\/shipping-returns['\"][^>]*>\s*Shipping[^<]*<\/a>/g,'')
 
 fs.writeFileSync(file,s)
 console.log('Storefront enhancement patch applied')
