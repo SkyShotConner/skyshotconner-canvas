@@ -18,19 +18,19 @@ s=s.replace(/const nav=\(to:string\)=>\{router\.push\(to\);setMenu\(false\);setS
 const stateAnchor="const [products,setProducts]=useState<Product[]>(demoProducts)"
 if(!/\[siteImages,setSiteImages\]/.test(s)){
   if(!s.includes(stateAnchor)) throw new Error('Unable to locate storefront product state')
-  s=s.replace(stateAnchor,stateAnchor+",[siteImages,setSiteImages]=useState<Record<string,string>>({})")
+  s=s.replace(stateAnchor,stateAnchor+",[siteImages,setSiteImages]=useState<Record<string,string>>({}),[siteImagesReady,setSiteImagesReady]=useState(false)")
 }
 
 if(!/supabase\.from\('site_images'\)/.test(s)){
   const anchor=" useEffect(()=>{if(!supabase)return;supabase.from('products')"
   const pos=s.indexOf(anchor)
   if(pos<0) throw new Error('Unable to locate storefront product effect')
-  const effect=" useEffect(()=>{if(!supabase)return;supabase.from('site_images').select('key,image_url').then(({data,error})=>{if(error){console.error('site_images load failed',error);return}setSiteImages(Object.fromEntries((data||[]).filter((x:any)=>x.image_url).map((x:any)=>[x.key,x.image_url])))});},[supabase])\n"
+  const effect=" useEffect(()=>{if(!supabase){setSiteImagesReady(true);return}supabase.from('site_images').select('key,image_url').then(({data,error})=>{if(error){console.error('site_images load failed',error);setSiteImagesReady(true);return}setSiteImages(Object.fromEntries((data||[]).filter((x:any)=>x.image_url).map((x:any)=>[x.key,x.image_url])));setSiteImagesReady(true)},()=>setSiteImagesReady(true))},[supabase])\n"
   s=s.slice(0,pos)+effect+s.slice(pos)
 }
 
-s=s.replace('<Home nav={nav} products={products}/>','<Home nav={nav} products={products} siteImages={siteImages} siteImagesReady={true}/>')
-s=s.replace('<Home nav={nav} products={products} siteImages={siteImages}/>','<Home nav={nav} products={products} siteImages={siteImages} siteImagesReady={true}/>')
+s=s.replace('<Home nav={nav} products={products}/>','<Home nav={nav} products={products} siteImages={siteImages} siteImagesReady={siteImagesReady}/>')
+s=s.replace('<Home nav={nav} products={products} siteImages={siteImages}/>','<Home nav={nav} products={products} siteImages={siteImages} siteImagesReady={siteImagesReady}/>')
 s=s.replace(/\{if\(!siteImagesReady\)return <main className="site-loading" aria-label="Loading SkyShotConner"\/>;/g,'')
 s=s.replace(/function Home\(([^\n]+)\)return /, 'function Home($1){return ')
 
@@ -57,7 +57,6 @@ if(!/function orderCollectionProducts\(/.test(s)){
 s=s.replace("function Shop({products,nav,query,setQuery,filter,setFilter,filterOpen,setFilterOpen,categories}:{products:Product[];nav:(x:string)=>void;query:string;setQuery:(x:string)=>void;filter:string;setFilter:(x:string)=>void;filterOpen:boolean;setFilterOpen:(x:boolean)=>void;categories:string[]}){return <main", "function Shop({products,nav,query,setQuery,filter,setFilter,filterOpen,setFilterOpen,categories}:{products:Product[];nav:(x:string)=>void;query:string;setQuery:(x:string)=>void;filter:string;setFilter:(x:string)=>void;filterOpen:boolean;setFilterOpen:(x:boolean)=>void;categories:string[]}){const orderedProducts=orderCollectionProducts(products);return <main")
 s=s.replace('{products.length?products.map(p=><ProductCard key={p.id} p={p} nav={nav}/>:<div className="notice empty-search">','{orderedProducts.length?orderedProducts.map((p,i)=><ProductCard key={p.id} p={p} nav={nav} layout={i%5<2?\'landscape\':\'portrait\'}/>):<div className="notice empty-search">')
 
-// The admin image manager is the single source of truth for public website imagery.
 const aboutStart=s.indexOf('function About(')
 const simpleStart=s.indexOf('function SimplePage(',aboutStart)
 if(aboutStart>=0&&simpleStart>aboutStart){
