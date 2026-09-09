@@ -44,7 +44,6 @@ s=s.replace("type Product={id:string;name:string;slug:string;price:number;short_
 s=s.replace("supabase.from('products').select('id,name,slug,price,short_description,description,category_id,product_images(storage_path)').eq('is_active',true)","supabase.from('products').select('id,name,slug,price,short_description,description,category_id,orientation,limited_edition,product_images(storage_path)').eq('is_active',true)")
 s=s.replace("images:(p.product_images||[]).map((x:any)=>x.storage_path),price:349","images:(p.product_images||[]).map((x:any)=>x.storage_path),orientation:p.orientation==='portrait'?'portrait':'landscape',limited_edition:!!p.limited_edition,price:Number(p.price)||349")
 
-// Product cards carry an explicit collection layout role. This prevents grid placement from depending on image metadata.
 s=s.replace("function ProductCard({p,nav,small=false}:{p:Product;nav:(x:string)=>void;small?:boolean})","function ProductCard({p,nav,small=false,layout}:{p:Product;nav:(x:string)=>void;small?:boolean;layout?:'landscape'|'portrait'})")
 s=s.replace("(p.orientation==='portrait'?'portrait':'landscape')","(layout||p.orientation||'landscape')")
 
@@ -56,6 +55,15 @@ if(!/function orderCollectionProducts\(/.test(s)){
 }
 s=s.replace("function Shop({products,nav,query,setQuery,filter,setFilter,filterOpen,setFilterOpen,categories}:{products:Product[];nav:(x:string)=>void;query:string;setQuery:(x:string)=>void;filter:string;setFilter:(x:string)=>void;filterOpen:boolean;setFilterOpen:(x:boolean)=>void;categories:string[]}){return <main", "function Shop({products,nav,query,setQuery,filter,setFilter,filterOpen,setFilterOpen,categories}:{products:Product[];nav:(x:string)=>void;query:string;setQuery:(x:string)=>void;filter:string;setFilter:(x:string)=>void;filterOpen:boolean;setFilterOpen:(x:boolean)=>void;categories:string[]}){const orderedProducts=orderCollectionProducts(products);return <main")
 s=s.replace('{products.length?products.map(p=><ProductCard key={p.id} p={p} nav={nav}/>:<div className="notice empty-search">','{orderedProducts.length?orderedProducts.map((p,i)=><ProductCard key={p.id} p={p} nav={nav} layout={i%5<2?\'landscape\':\'portrait\'}/>):<div className="notice empty-search">')
+
+// The admin image manager is the single source of truth for public website imagery.
+// Remove the old localStorage-based public About editor so customers never see admin controls.
+const aboutStart=s.indexOf('function About(')
+const simpleStart=s.indexOf('function SimplePage(',aboutStart)
+if(aboutStart>=0&&simpleStart>aboutStart){
+  const aboutFn=`function About(){const [images,setImages]=useState<Record<string,string>>({});const [ready,setReady]=useState(false);const supabase=useMemo(()=>createClient(),[]);useEffect(()=>{if(!supabase){setReady(true);return}supabase.from('site_images').select('key,image_url').in('key',['about_hero','about_main','about_secondary']).then(({data})=>{setImages(Object.fromEntries((data||[]).filter((x:any)=>x.image_url).map((x:any)=>[x.key,x.image_url])));setReady(true)}).catch(()=>setReady(true))},[supabase]);if(!ready)return <main className="site-loading" aria-label="Loading SkyShotConner"/>;return <main><section className="hero about-hero"><img className="hero-img" src={images.about_hero||FALLBACK} alt="SkyShotConner aviation story"/><div className="hero-copy"><div className="eyebrow">About SkyShotConner</div><h1 className="display">WHY<br/>WE FLY.</h1></div></section><section className="paper about-paper"><div className="container"><div className="about-story"><div className="editorial-copy"><div className="eyebrow">The photography</div><h2>Moments become objects.</h2><p>SkyShotConner turns the split second of an aircraft in light, motion and atmosphere into collectible wall art. The aim is simple: make aviation feel as powerful in a room as it feels in the sky.</p></div><img src={images.about_main||FALLBACK} alt="SkyShotConner aviation photography"/></div><div className="about-story second"><img src={images.about_secondary||FALLBACK} alt="Aviation photography"/><div className="editorial-copy"><div className="eyebrow">Your story</div><h2>Built around the aircraft you love.</h2><p>Every SkyShotConner canvas begins with original aviation photography and is prepared as premium wall art for aviation enthusiasts and collectors.</p></div></div></div></section></main>}`
+  s=s.slice(0,aboutStart)+aboutFn+s.slice(simpleStart)
+}
 
 s=s.replace(/<button[^>]*>\s*Shipping\s*<\/button>/gi,'')
 s=s.replace(/<a[^>]*(?:href=["']\/shipping["'][^>]*)>\s*Shipping\s*<\/a>/gi,'')
