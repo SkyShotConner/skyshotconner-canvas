@@ -14,7 +14,8 @@ s=s.replace(/const \[products,setProducts\]=useState<Product\[\]>\(demoProducts\
 s=s.replace(/products\.find\(p=>p\.slug===currentSlug\)\|\|demoProducts\.find\(p=>p\.slug===currentSlug\)/, "products.find(p=>p.slug===currentSlug)")
 
 // Homepage wording and section cleanup.
-s=s.replace('C O M M E R C I A L','M O D E R N')
+s=s.replace('C O M M E R C I A L','MODERN')
+s=s.replace('M I L I T A R Y','MILITARY')
 s=s.replace(/<Scene title="C O C K P I T"[\s\S]*?\/>/g,'')
 s=s.replace('title="H I S T O R I C"','title="HISTORIC"')
 
