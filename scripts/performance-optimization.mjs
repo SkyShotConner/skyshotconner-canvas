@@ -3,8 +3,8 @@ import fs from 'node:fs'
 const file='app/[[...slug]]/page.tsx'
 let s=fs.readFileSync(file,'utf8')
 
-// Load lightweight performance/loading styles once, after the client directive.
-if(!s.includes("import './performance.css'")) s=s.replace(/^'use client'\n/, "'use client'\n\nimport './performance.css'\n")
+// Load lightweight performance/loading styles from the app-level stylesheet.
+if(!s.includes("import '../performance.css'")) s=s.replace(/^'use client'\n/, "'use client'\n\nimport '../performance.css'\n")
 
 // Keep all public imagery database-driven and prevent legacy/demo assets from returning.
 s=s.replace(/const FALLBACK = ['\"][^'\"]+['\"]/,
