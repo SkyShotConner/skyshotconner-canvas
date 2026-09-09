@@ -20,6 +20,8 @@ s=s.replace(/products\.find\(p=>p\.slug===currentSlug\)\|\|demoProducts\.find\(p
 // Homepage wording and section cleanup.
 s=s.replace('C O M M E R C I A L','M O D E R N')
 s=s.replace(/<Scene title="C O C K P I T"[\s\S]*?\/>/g,'')
+// Historic is rendered as one compact word so CSS letter-spacing cannot force it onto multiple lines.
+s=s.replace('title="H I S T O R I C"','title="HISTORIC"')
 
 // Give the three landing-page scenes explicit classes so mobile layout does not depend on fragile nth-of-type selectors.
 s=s.replace("<section className=\"scene\"><img src={image}","<section className={'scene '+(title.includes('HISTORIC')?'scene-historic':'')}><img src={image}")
