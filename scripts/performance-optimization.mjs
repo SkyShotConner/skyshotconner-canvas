@@ -11,7 +11,7 @@ s=s.replace(/const FALLBACK = ['\"][^'\"]+['\"]/, "const FALLBACK = ''")
 s=s.replace(/const editorial = \{[^\n]+\}/, "const editorial = { commercial:'', military:'', historic:'', cockpit:'' }")
 s=s.replace(/const demoProducts:Product\[\]=\[[\s\S]*?\n\]\nfunction imgFor/, "const demoProducts:Product[]=[]\nfunction imgFor")
 s=s.replace(/const \[products,setProducts\]=useState<Product\[\]>\(demoProducts\)/, "const [products,setProducts]=useState<Product[]>([])")
-s=s.replace(/products\.find\(p=>p\.slug===currentSlug\)\|\|demoProducts\.find\(p=>p\.slug===currentSlug\)/, "products.find(p=>p.slug===currentSlug)")
+s=s.replace(/products\.find\(p=>p\.slug===currentSlug)\|\|demoProducts\.find\(p=>p\.slug===currentSlug\)/, "products.find(p=>p.slug===currentSlug)")
 
 // Homepage wording and section cleanup.
 s=s.replace('C O M M E R C I A L','MODERN')
@@ -22,6 +22,9 @@ s=s.replace('title="H I S T O R I C"','title="HISTORIC"')
 // Give all three landing-page scenes explicit classes so they share the same mobile treatment.
 s=s.replace("<section className=\"scene\"><img src={image}","<section className={'scene '+(title.includes('HISTORIC')?'scene-historic':title.includes('MODERN')?'scene-modern':title.includes('MILITARY')?'scene-military':'')}><img src={image}")
 s=s.replace("<button className=\"wide\" onClick={()=>nav('/shop')}>{title}</button>","<button className={'wide '+(title.includes('HISTORIC')?'historic-title':title.includes('MODERN')?'modern-title':title.includes('MILITARY')?'military-title':'')} onClick={()=>nav('/shop')}>{title}</button>")
+
+// Remove the circular VIEW COLLECTION overlays from the three landing scenes.
+s=s.replace("<div className=\"lens\"><span>VIEW COLLECTION</span></div>","")
 
 // Browser image optimizations: async decoding and eager loading for homepage imagery.
 s=s.replace(/<img(?![^>]*loading=)([^>]*?)\/>/g, (match, attrs) => {
