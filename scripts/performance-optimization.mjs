@@ -17,19 +17,20 @@ s=s.replace(/const \[products,setProducts\]=useState<Product\[\]>\(demoProducts\
 s=s.replace(/products\.find\(p=>p\.slug===currentSlug\)\|\|demoProducts\.find\(p=>p\.slug===currentSlug\)/,
   "products.find(p=>p.slug===currentSlug)")
 
-// Browser image optimizations: async decoding and lazy-loading for non-hero images.
+// Browser image optimizations: homepage imagery is critical and loads before the veil is removed.
 s=s.replace(/<img(?![^>]*loading=)([^>]*?)\/>/g, (match, attrs) => {
-  const eager = /hero-img/.test(attrs)
+  const homepage = /hero-img|src=\{siteImage\(siteImages,'home_|src=\{image\}/.test(attrs)
+  const eager = homepage || /hero-img/.test(attrs)
   return `<img${attrs}${eager?' loading="eager" fetchPriority="high"':' loading="lazy"'} decoding="async"/>`
 })
 
-// Lightweight site loading veil; it is time-bounded so it can never trap the user.
+// Keep the loading screen up until the browser has finished loading and homepage site imagery is ready.
 if(!/function SiteLoader\(/.test(s)){
   const anchor='function Nav('
-  const loader="function SiteLoader(){const [show,setShow]=useState(true);useEffect(()=>{const done=()=>window.setTimeout(()=>setShow(false),180);if(document.readyState==='complete')done();else window.addEventListener('load',done,{once:true});const fallback=window.setTimeout(()=>setShow(false),1800);return()=>{window.removeEventListener('load',done);window.clearTimeout(fallback)}},[]);return show?<div className=\"site-loader\" role=\"status\" aria-label=\"Loading SkyShotConner\"><div className=\"site-loader-mark\">SKYSHOTCONNER</div><div className=\"site-loader-line\"><span/></div></div>:null}\n"
+  const loader="function SiteLoader({ready=true}:{ready?:boolean}){const [windowReady,setWindowReady]=useState(typeof document!=='undefined'&&document.readyState==='complete');useEffect(()=>{if(document.readyState==='complete'){setWindowReady(true);return}const done=()=>setWindowReady(true);window.addEventListener('load',done,{once:true});return()=>window.removeEventListener('load',done)},[]);const show=!(windowReady&&ready);return show?<div className=\"site-loader\" role=\"status\" aria-label=\"Loading SkyShotConner\"><div className=\"site-loader-mark\">SKYSHOTCONNER</div><div className=\"site-loader-line\"><span/></div></div>:null}\n"
   if(!s.includes(anchor)) throw new Error('Unable to locate navigation component')
   s=s.replace(anchor,loader+anchor)
-  s=s.replace("return <div><Nav", "return <div><SiteLoader/><Nav")
+  s=s.replace("return <div><Nav", "return <div><SiteLoader ready={path==='/'?siteImagesReady:true}/><Nav")
 }
 
 fs.writeFileSync(file,s)
