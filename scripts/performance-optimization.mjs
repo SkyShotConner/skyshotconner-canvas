@@ -7,25 +7,20 @@ let s=fs.readFileSync(file,'utf8')
 if(!s.includes("import '../performance.css'")) s=s.replace(/^'use client'\n/, "'use client'\n\nimport '../performance.css'\n")
 
 // Keep all public imagery database-driven and prevent legacy/demo assets from returning.
-s=s.replace(/const FALLBACK = ['\"][^'\"]+['\"]/,
-  "const FALLBACK = ''")
-s=s.replace(/const editorial = \{[^\n]+\}/,
-  "const editorial = { commercial:'', military:'', historic:'', cockpit:'' }")
+s=s.replace(/const FALLBACK = ['\"][^'\"]+['\"]/, "const FALLBACK = ''")
+s=s.replace(/const editorial = \{[^\n]+\}/, "const editorial = { commercial:'', military:'', historic:'', cockpit:'' }")
 s=s.replace(/const demoProducts:Product\[\]=\[[\s\S]*?\n\]\nfunction imgFor/, "const demoProducts:Product[]=[]\nfunction imgFor")
-s=s.replace(/const \[products,setProducts\]=useState<Product\[\]>\(demoProducts\)/,
-  "const [products,setProducts]=useState<Product[]>([])")
-s=s.replace(/products\.find\(p=>p\.slug===currentSlug\)\|\|demoProducts\.find\(p=>p\.slug===currentSlug\)/,
-  "products.find(p=>p.slug===currentSlug)")
+s=s.replace(/const \[products,setProducts\]=useState<Product\[\]>\(demoProducts\)/, "const [products,setProducts]=useState<Product[]>([])")
+s=s.replace(/products\.find\(p=>p\.slug===currentSlug\)\|\|demoProducts\.find\(p=>p\.slug===currentSlug\)/, "products.find(p=>p.slug===currentSlug)")
 
 // Homepage wording and section cleanup.
 s=s.replace('C O M M E R C I A L','M O D E R N')
 s=s.replace(/<Scene title="C O C K P I T"[\s\S]*?\/>/g,'')
-// Historic is rendered as one compact word so CSS letter-spacing cannot force it onto multiple lines.
 s=s.replace('title="H I S T O R I C"','title="HISTORIC"')
 
-// Give the three landing-page scenes explicit classes so mobile layout does not depend on fragile nth-of-type selectors.
-s=s.replace("<section className=\"scene\"><img src={image}","<section className={'scene '+(title.includes('HISTORIC')?'scene-historic':'')}><img src={image}")
-s=s.replace("<button className=\"wide\" onClick={()=>nav('/shop')}>{title}</button>","<button className={'wide '+(title.includes('HISTORIC')?'historic-title':'')} onClick={()=>nav('/shop')}>{title}</button>")
+// Give all three landing-page scenes explicit classes so they share the same mobile treatment.
+s=s.replace("<section className=\"scene\"><img src={image}","<section className={'scene '+(title.includes('HISTORIC')?'scene-historic':title.includes('MODERN')?'scene-modern':title.includes('MILITARY')?'scene-military':'')}><img src={image}")
+s=s.replace("<button className=\"wide\" onClick={()=>nav('/shop')}>{title}</button>","<button className={'wide '+(title.includes('HISTORIC')?'historic-title':title.includes('MODERN')?'modern-title':title.includes('MILITARY')?'military-title':'')} onClick={()=>nav('/shop')}>{title}</button>")
 
 // Browser image optimizations: async decoding and eager loading for homepage imagery.
 s=s.replace(/<img(?![^>]*loading=)([^>]*?)\/>/g, (match, attrs) => {
@@ -44,10 +39,19 @@ if(!/function SiteLoader\(/.test(s)){
   s=s.replace("return <div><Nav", "return <div><SiteLoader ready={path==='/'?siteImagesReady:true}/><Nav")
 }
 
+// First-visit legal consent gate. Acceptance is remembered locally; declining leaves the site.
+if(!/function LegalConsent\(/.test(s)){
+  const anchor='function Nav('
+  const consent="function LegalConsent(){const [open,setOpen]=useState(false);useEffect(()=>{try{setOpen(localStorage.getItem('skyshotconner-legal-consent')!=='accepted')}catch{setOpen(true)}},[]);const accept=()=>{try{localStorage.setItem('skyshotconner-legal-consent','accepted')}catch{};setOpen(false)};const leave=()=>{window.location.replace('https://www.google.com/')};if(!open)return null;return <div className=\"legal-overlay\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"legal-title\"><div className=\"legal-modal\"><div className=\"legal-eyebrow\">WELCOME TO SKYSHOTCONNER</div><h2 id=\"legal-title\">Before you continue</h2><p>By entering SkyShotConner, you agree to our <a href=\"/terms\">Terms &amp; Conditions</a> and acknowledge our <a href=\"/privacy\">Privacy Policy</a>.</p><div className=\"legal-actions\"><button className=\"legal-leave\" onClick={leave}>Decline · Leave page</button><button className=\"legal-accept\" onClick={accept}>Accept &amp; Continue</button></div></div></div>}\n"
+  if(!s.includes(anchor)) throw new Error('Unable to locate navigation component for consent gate')
+  s=s.replace(anchor,consent+anchor)
+  s=s.replace("return <div><SiteLoader", "return <div><LegalConsent/><SiteLoader")
+}
+
 // Premium footer refresh: cleaner hierarchy on desktop and a compact stacked layout on mobile.
 const oldFooter=/function Footer\(\{nav\}:\{nav:\(x:string\)=>void\}\)\{[\s\S]*?\}\n$/m
 const newFooter=`function Footer({nav}:{nav:(x:string)=>void}){return <footer className="footer"><div className="container footer-top"><div className="footer-brand"><div className="brand">SKYSHOTCONNER</div><p>Aviation captured as art.<br/>Premium canvas pieces made for people who look up.</p><button className="footer-cta" onClick={()=>nav('/shop')}>Explore the collection <ArrowUpRight size={13}/></button></div><div className="footer-links"><div><h3>Explore</h3><button onClick={()=>nav('/shop')}>Collection</button><button onClick={()=>nav('/shop')}>Aircraft</button><button onClick={()=>nav('/about')}>About</button></div><div><h3>Support</h3><button onClick={()=>nav('/contact')}>Contact</button><button onClick={()=>nav('/faq')}>FAQ</button></div><div><h3>Follow</h3><a href="https://www.instagram.com/skyshotconner/" target="_blank" rel="noreferrer">Instagram</a></div></div></div><div className="container footer-bottom"><p>© {new Date().getFullYear()} SkyShotConner</p><div><button onClick={()=>nav('/privacy')}>Privacy</button><button onClick={()=>nav('/terms')}>Terms</button></div><span>The Art of Flight.</span></div></footer>}`
 if(oldFooter.test(s)) s=s.replace(oldFooter,newFooter)
 
 fs.writeFileSync(file,s)
-console.log('Performance optimizations applied')
+console.log('Performance optimizations, landing scenes, and legal consent applied')
