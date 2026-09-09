@@ -4,7 +4,7 @@
   "private":true,
   "scripts":{
     "dev":"next dev",
-    "prebuild":"node scripts/patch-storefront.mjs && node scripts/enhance-storefront.mjs && node scripts/finalize-storefront.mjs && node scripts/rebuild-collection-layout.mjs && node scripts/remove-legacy-images.mjs && node scripts/add-admin-users.mjs && node scripts/add-paystack-checkout.mjs",
+    "prebuild":"node scripts/patch-storefront.mjs && node scripts/enhance-storefront.mjs && node scripts/finalize-storefront.mjs && node scripts/rebuild-collection-layout.mjs && node scripts/remove-legacy-images.mjs && node scripts/add-admin-users.mjs && node scripts/add-paystack-checkout.mjs && node scripts/performance-optimization.mjs",
     "build":"next build",
     "start":"next start",
     "lint":"next lint"
