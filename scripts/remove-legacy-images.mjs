@@ -28,11 +28,5 @@ s = s.replace(/image=\{editorial\.cockpit\}/g, "image={siteImage(siteImages,'hom
 s = s.replace(/\[\.\.\.product\.images,\.\.\.product\.images\]\.slice\(0,2\)/g, "product.images.slice(0,2)")
 s = s.replace(/<span className=\"image-index\">01 \/ 02<\/span>/g, "<span className=\"image-index\">01 \/ {Math.max(1,p.images.length).toString().padStart(2,'0')}<\/span>")
 
-// Remove the old frame catalogue from generated storefront code if an older generator leaves it behind.
-s = s.replace(/const FRAME_PRICES:Record<string,number>=\{[^\n]+\}\n/g, '')
-s = s.replace(/,frame:string/g, '')
-s = s.replace(/frame=selectedFrame/g, '')
-s = s.replace(/selectedFrame,setSelectedFrame/g, '')
-
 fs.writeFileSync(file, s)
 console.log('Legacy storefront imagery removed')
