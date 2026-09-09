@@ -11,7 +11,7 @@ s=s.replace(/const FALLBACK = ['\"][^'\"]+['\"]/, "const FALLBACK = ''")
 s=s.replace(/const editorial = \{[^\n]+\}/, "const editorial = { commercial:'', military:'', historic:'', cockpit:'' }")
 s=s.replace(/const demoProducts:Product\[\]=\[[\s\S]*?\n\]\nfunction imgFor/, "const demoProducts:Product[]=[]\nfunction imgFor")
 s=s.replace(/const \[products,setProducts\]=useState<Product\[\]>\(demoProducts\)/, "const [products,setProducts]=useState<Product[]>([])")
-s=s.replace(/products\.find\(p=>p\.slug===currentSlug)\|\|demoProducts\.find\(p=>p\.slug===currentSlug\)/, "products.find(p=>p.slug===currentSlug)")
+s=s.replace(/products\.find\(p=>p\.slug===currentSlug\)\|\|demoProducts\.find\(p=>p\.slug===currentSlug\)/, "products.find(p=>p.slug===currentSlug)")
 
 // Homepage wording and section cleanup.
 s=s.replace('C O M M E R C I A L','MODERN')
