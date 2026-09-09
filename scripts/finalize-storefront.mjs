@@ -41,8 +41,9 @@ if(!/function siteImage\(/.test(s)){
 }
 
 s=s.replace("type Product={id:string;name:string;slug:string;price:number;short_description?:string|null;description?:string|null;category?:string|null;images:string[]}","type Product={id:string;name:string;slug:string;price:number;short_description?:string|null;description?:string|null;category?:string|null;images:string[];orientation?:'landscape'|'portrait';limited_edition?:boolean}")
-s=s.replace("supabase.from('products').select('id,name,slug,price,short_description,description,category_id,product_images(storage_path)').eq('is_active',true)","supabase.from('products').select('id,name,slug,price,short_description,description,category_id,orientation,limited_edition,product_images(storage_path)').eq('is_active',true)")
+s=s.replace("supabase.from('products').select('id,name,slug,price,short_description,description,category_id,product_images(storage_path)').eq('is_active',true)","supabase.from('products').select('id,name,slug,price,short_description,description,category_id,orientation,limited_edition,category:categories(name),product_images(storage_path)').eq('is_active',true)")
 s=s.replace("images:(p.product_images||[]).map((x:any)=>x.storage_path),price:349","images:(p.product_images||[]).map((x:any)=>x.storage_path),orientation:p.orientation==='portrait'?'portrait':'landscape',limited_edition:!!p.limited_edition,price:Number(p.price)||349")
+s=s.replace("category:p.category_id,orientation:p.orientation||'landscape'","category:p.category?.name||'Aviation Art',orientation:p.orientation||'landscape'")
 
 s=s.replace("function ProductCard({p,nav,small=false}:{p:Product;nav:(x:string)=>void;small?:boolean})","function ProductCard({p,nav,small=false,layout}:{p:Product;nav:(x:string)=>void;small?:boolean;layout?:'landscape'|'portrait'})")
 s=s.replace("(p.orientation==='portrait'?'portrait':'landscape')","(layout||p.orientation||'landscape')")
@@ -57,7 +58,6 @@ s=s.replace("function Shop({products,nav,query,setQuery,filter,setFilter,filterO
 s=s.replace('{products.length?products.map(p=><ProductCard key={p.id} p={p} nav={nav}/>:<div className="notice empty-search">','{orderedProducts.length?orderedProducts.map((p,i)=><ProductCard key={p.id} p={p} nav={nav} layout={i%5<2?\'landscape\':\'portrait\'}/>):<div className="notice empty-search">')
 
 // The admin image manager is the single source of truth for public website imagery.
-// Remove the old localStorage-based public About editor so customers never see admin controls.
 const aboutStart=s.indexOf('function About(')
 const simpleStart=s.indexOf('function SimplePage(',aboutStart)
 if(aboutStart>=0&&simpleStart>aboutStart){
