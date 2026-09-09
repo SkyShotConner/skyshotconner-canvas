@@ -17,17 +17,19 @@ s=s.replace(/const \[products,setProducts\]=useState<Product\[\]>\(demoProducts\
 s=s.replace(/products\.find\(p=>p\.slug===currentSlug\)\|\|demoProducts\.find\(p=>p\.slug===currentSlug\)/,
   "products.find(p=>p.slug===currentSlug)")
 
-// Browser image optimizations: homepage imagery is critical and loads before the veil is removed.
+// Homepage imagery is critical: load it eagerly and mark it for the site loader.
 s=s.replace(/<img(?![^>]*loading=)([^>]*?)\/>/g, (match, attrs) => {
   const homepage = /hero-img|src=\{siteImage\(siteImages,'home_|src=\{image\}/.test(attrs)
   const eager = homepage || /hero-img/.test(attrs)
-  return `<img${attrs}${eager?' loading="eager" fetchPriority="high"':' loading="lazy"'} decoding="async"/>`
+  const critical = homepage ? ' data-critical-image="true"' : ''
+  return `<img${attrs}${critical}${eager?' loading="eager" fetchPriority="high"':' loading="lazy"'} decoding="async"/>`
 })
 
-// Keep the loading screen up until the browser has finished loading and homepage site imagery is ready.
+// Keep the loading screen up until the browser is ready, site imagery is fetched,
+// and all homepage critical images have finished loading.
 if(!/function SiteLoader\(/.test(s)){
   const anchor='function Nav('
-  const loader="function SiteLoader({ready=true}:{ready?:boolean}){const [windowReady,setWindowReady]=useState(typeof document!=='undefined'&&document.readyState==='complete');useEffect(()=>{if(document.readyState==='complete'){setWindowReady(true);return}const done=()=>setWindowReady(true);window.addEventListener('load',done,{once:true});return()=>window.removeEventListener('load',done)},[]);const show=!(windowReady&&ready);return show?<div className=\"site-loader\" role=\"status\" aria-label=\"Loading SkyShotConner\"><div className=\"site-loader-mark\">SKYSHOTCONNER</div><div className=\"site-loader-line\"><span/></div></div>:null}\n"
+  const loader="function SiteLoader({ready=true}:{ready?:boolean}){const [windowReady,setWindowReady]=useState(typeof document!=='undefined'&&document.readyState==='complete');const [imagesReady,setImagesReady]=useState(false);useEffect(()=>{if(document.readyState==='complete')setWindowReady(true);else{const done=()=>setWindowReady(true);window.addEventListener('load',done,{once:true});return()=>window.removeEventListener('load',done)}},[]);useEffect(()=>{if(!ready||!windowReady)return;let timer:number;const check=()=>{const images=Array.from(document.querySelectorAll<HTMLImageElement>('[data-critical-image]'));if(images.length&&images.every(img=>img.complete)){setImagesReady(true);return}timer=window.setTimeout(check,50)};check();return()=>window.clearTimeout(timer)},[ready,windowReady]);const show=!(windowReady&&ready&&imagesReady);return show?<div className=\"site-loader\" role=\"status\" aria-label=\"Loading SkyShotConner\"><div className=\"site-loader-mark\">SKYSHOTCONNER</div><div className=\"site-loader-line\"><span/></div></div>:null}\n"
   if(!s.includes(anchor)) throw new Error('Unable to locate navigation component')
   s=s.replace(anchor,loader+anchor)
   s=s.replace("return <div><Nav", "return <div><SiteLoader ready={path==='/'?siteImagesReady:true}/><Nav")
