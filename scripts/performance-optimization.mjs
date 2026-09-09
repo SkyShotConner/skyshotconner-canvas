@@ -21,6 +21,10 @@ s=s.replace(/products\.find\(p=>p\.slug===currentSlug\)\|\|demoProducts\.find\(p
 s=s.replace('C O M M E R C I A L','M O D E R N')
 s=s.replace(/<Scene title="C O C K P I T"[\s\S]*?\/>/g,'')
 
+// Give the three landing-page scenes explicit classes so mobile layout does not depend on fragile nth-of-type selectors.
+s=s.replace("<section className=\"scene\"><img src={image}","<section className={'scene '+(title.includes('HISTORIC')?'scene-historic':'')}><img src={image}")
+s=s.replace("<button className=\"wide\" onClick={()=>nav('/shop')}>{title}</button>","<button className={'wide '+(title.includes('HISTORIC')?'historic-title':'')} onClick={()=>nav('/shop')}>{title}</button>")
+
 // Browser image optimizations: async decoding and eager loading for homepage imagery.
 s=s.replace(/<img(?![^>]*loading=)([^>]*?)\/>/g, (match, attrs) => {
   const homepage = /hero-img|src=\{siteImage\(siteImages,'home_|src=\{image\}/.test(attrs)
@@ -37,6 +41,11 @@ if(!/function SiteLoader\(/.test(s)){
   s=s.replace(anchor,loader+anchor)
   s=s.replace("return <div><Nav", "return <div><SiteLoader ready={path==='/'?siteImagesReady:true}/><Nav")
 }
+
+// Premium footer refresh: cleaner hierarchy on desktop and a compact stacked layout on mobile.
+const oldFooter=/function Footer\(\{nav\}:\{nav:\(x:string\)=>void\}\)\{[\s\S]*?\}\n$/m
+const newFooter=`function Footer({nav}:{nav:(x:string)=>void}){return <footer className="footer"><div className="container footer-top"><div className="footer-brand"><div className="brand">SKYSHOTCONNER</div><p>Aviation captured as art.<br/>Premium canvas pieces made for people who look up.</p><button className="footer-cta" onClick={()=>nav('/shop')}>Explore the collection <ArrowUpRight size={13}/></button></div><div className="footer-links"><div><h3>Explore</h3><button onClick={()=>nav('/shop')}>Collection</button><button onClick={()=>nav('/shop')}>Aircraft</button><button onClick={()=>nav('/about')}>About</button></div><div><h3>Support</h3><button onClick={()=>nav('/contact')}>Contact</button><button onClick={()=>nav('/faq')}>FAQ</button></div><div><h3>Follow</h3><a href="https://www.instagram.com/skyshotconner/" target="_blank" rel="noreferrer">Instagram</a><a href="https://www.buymeacoffee.com/" target="_blank" rel="noreferrer">Support the work</a></div></div></div><div className="container footer-bottom"><p>© {new Date().getFullYear()} SkyShotConner</p><div><button onClick={()=>nav('/privacy')}>Privacy</button><button onClick={()=>nav('/terms')}>Terms</button></div><span>The Art of Flight.</span></div></footer>}`
+if(oldFooter.test(s)) s=s.replace(oldFooter,newFooter)
 
 fs.writeFileSync(file,s)
 console.log('Performance optimizations applied')
