@@ -19,6 +19,12 @@ s=s.replace('Four aviation artworks. Five canvas sizes.','Four aviation artworks
 s=s.replace('{i.size} · {i.frame} · Qty {i.quantity}','{i.size} · Qty {i.quantity}')
 s=s.replace('{i.size} · {i.frame} · {i.quantity}','{i.size} · {i.quantity}')
 
+// Migrate any cart saved by the previous framed-canvas version so old prices/options cannot leak into checkout.
+s=s.replace("useEffect(()=>{try{setCart(JSON.parse(localStorage.getItem('ssc-cart')||'[]'));setWish(JSON.parse(localStorage.getItem('ssc-wish')||'[]'))}catch{}},[])","useEffect(()=>{try{const saved=JSON.parse(localStorage.getItem('ssc-cart')||'[]');setCart(Array.isArray(saved)?saved.map((item:any)=>({...item,frame:'Unframed',price:canvasPrice(item.size,'Unframed')})):[]);setWish(JSON.parse(localStorage.getItem('ssc-wish')||'[]'))}catch{setCart([]);setWish([])}},[])")
+
+// Do not show a fake second-image indicator when an artwork has only one image.
+s=s.replace('<span className="image-index">01 / 02</span>','<span className="image-index">01 / {Math.max(p.images?.length||1,1)}</span>')
+
 const productStart=s.indexOf('function ProductPage(')
 const cartStart=s.indexOf('function Cart(',productStart)
 if(productStart<0||cartStart<0) throw new Error('ProductPage or Cart function not found')
