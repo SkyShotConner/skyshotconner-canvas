@@ -3,10 +3,11 @@ import fs from 'node:fs'
 const file = 'app/[[...slug]]/page.tsx'
 let s = fs.readFileSync(file, 'utf8')
 
-// Supabase must send recovery links back to the dedicated password page.
-// Keep this environment-aware so localhost and the deployed Vercel site both work.
+// Always send password recovery emails back to the production password-reset page.
+// This prevents Supabase from falling back to the old Vercel deployment URL.
+const resetRedirect = 'https://skyshotconner.co.za/reset-password'
 const pattern = /resetPasswordForEmail\(\s*email\s*(?:,\s*\{[^{}]*\})?\s*\)/g
-s = s.replace(pattern, "resetPasswordForEmail(email,{redirectTo:window.location.origin+'/reset-password'})")
+s = s.replace(pattern, `resetPasswordForEmail(email,{redirectTo:'${resetRedirect}'})`)
 
 fs.writeFileSync(file, s)
 
