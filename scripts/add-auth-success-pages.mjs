@@ -6,20 +6,17 @@ let s=fs.readFileSync(file,'utf8')
 const signupUrl='https://skyshotconner.co.za/auth/verified'
 const magicUrl='https://skyshotconner.co.za/auth/magic-link'
 
-// Route the auth callbacks to branded success pages instead of the Site URL.
 const routeAnchor="path==='/forgot-password'?<Auth mode=\"forgot\" nav={nav} supabase={supabase}/>:"
 const routes="path==='/auth/verified'?<AuthSuccess type=\"signup\" nav={nav}/>:path==='/auth/email-changed'?<AuthSuccess type=\"email_change\" nav={nav}/>:path==='/auth/magic-link'?<AuthSuccess type=\"magic\" nav={nav}/>:"
 if(s.includes(routeAnchor) && !s.includes("path==='/auth/verified'?")) s=s.replace(routeAnchor,routes+routeAnchor)
 
-// Catch callback types from both Supabase implicit-flow hash fragments and query strings.
+// Read the callback type from the query string or hash without regex-based code generation.
 const supabaseAnchor="const supabase=useMemo(()=>createClient(),[])"
 if(s.includes(supabaseAnchor) && !s.includes('const authCallbackType')){
-  const effect=`${supabaseAnchor}\n useEffect(()=>{const q=new URLSearchParams(window.location.search);const h=new URLSearchParams(window.location.hash.replace(/^#/,'').replace(/^\\?/,'));const authCallbackType=q.get('type')||h.get('type');if(authCallbackType==='signup')router.replace('/auth/verified');else if(authCallbackType==='email_change')router.replace('/auth/email-changed');else if(authCallbackType==='magiclink')router.replace('/auth/magic-link')},[router])`
+  const effect=`${supabaseAnchor}\n useEffect(()=>{const q=new URLSearchParams(window.location.search);const hash=window.location.hash.startsWith('#')?window.location.hash.slice(1):window.location.hash;const h=new URLSearchParams(hash.startsWith('?')?hash.slice(1):hash);const authCallbackType=q.get('type')||h.get('type');if(authCallbackType==='signup')router.replace('/auth/verified');else if(authCallbackType==='email_change')router.replace('/auth/email-changed');else if(authCallbackType==='magiclink')router.replace('/auth/magic-link')},[router])`
   s=s.replace(supabaseAnchor,effect)
 }
 
-// Replace the generated auth form with one that explicitly requests the correct
-// post-email destinations. This is important because Supabase otherwise uses Site URL.
 const authStart=s.indexOf('function Auth(')
 const authEnd=s.indexOf('function Wishlist(',authStart)
 if(authStart>=0&&authEnd>authStart){
