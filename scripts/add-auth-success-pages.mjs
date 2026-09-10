@@ -14,7 +14,7 @@ if(s.includes(routeAnchor) && !s.includes("path==='/auth/verified'?")) s=s.repla
 // Catch callback types from both Supabase implicit-flow hash fragments and query strings.
 const supabaseAnchor="const supabase=useMemo(()=>createClient(),[])"
 if(s.includes(supabaseAnchor) && !s.includes('const authCallbackType')){
-  const effect=`${supabaseAnchor}\n useEffect(()=>{const q=new URLSearchParams(window.location.search);const h=new URLSearchParams(window.location.hash.replace(/^#/,'').replace(/^\?/,'));const authCallbackType=q.get('type')||h.get('type');if(authCallbackType==='signup')router.replace('/auth/verified');else if(authCallbackType==='email_change')router.replace('/auth/email-changed');else if(authCallbackType==='magiclink')router.replace('/auth/magic-link')},[router])`
+  const effect=`${supabaseAnchor}\n useEffect(()=>{const q=new URLSearchParams(window.location.search);const h=new URLSearchParams(window.location.hash.replace(/^#/,'').replace(/^\\?/,'));const authCallbackType=q.get('type')||h.get('type');if(authCallbackType==='signup')router.replace('/auth/verified');else if(authCallbackType==='email_change')router.replace('/auth/email-changed');else if(authCallbackType==='magiclink')router.replace('/auth/magic-link')},[router])`
   s=s.replace(supabaseAnchor,effect)
 }
 
