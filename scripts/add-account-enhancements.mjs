@@ -21,7 +21,8 @@ const accountStart=s.indexOf('function Account(')
 const accountEnd=s.indexOf('function Wishlist(',accountStart)
 if(accountStart>=0&&accountEnd>accountStart){
  const old=s.slice(accountStart,accountEnd)
- const accountFn=old.replace("const verified=!!user.email_confirmed_at;", "const [verified,setVerified]=useState(!!user.email_confirmed_at||!!user.confirmed_at);useEffect(()=>{let alive=true;async function refresh(){const {data}=await supabase.auth.getUser();if(alive&&data?.user)setVerified(!!data.user.email_confirmed_at||!!data.user.confirmed_at)}refresh();return()=>{alive=false}},[supabase,user?.id]);")
+ let accountFn=old.replace("const verified=!!user.email_confirmed_at;", "const [verified,setVerified]=useState(!!user?.email_confirmed_at||!!user?.confirmed_at);useEffect(()=>{let alive=true;async function refresh(){const {data}=await supabase.auth.getUser();if(alive&&data?.user)setVerified(!!data.user.email_confirmed_at||!!data.user.confirmed_at)}refresh();return()=>{alive=false}},[supabase,user?.id]);")
+ if(!accountFn.includes('data-verified-badge')) accountFn=accountFn.replace(/return (<main[^>]*>)/,"return $1{verified&&<div className=\"verified-badge\" data-verified-badge><span>✓</span> VERIFIED</div>}")
  s=s.slice(0,accountStart)+accountFn+s.slice(accountEnd)
 }
 
