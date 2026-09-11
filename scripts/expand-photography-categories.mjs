@@ -3,18 +3,30 @@ import fs from 'node:fs'
 const sitePath = 'app/[[...slug]]/page.tsx'
 const adminPath = 'app/admin/page.tsx'
 
+function mustReplace(source, pattern, replacement, label) {
+  const next = source.replace(pattern, replacement)
+  if (next === source) throw new Error(`Photography update failed: ${label}`)
+  return next
+}
+
 let site = fs.readFileSync(sitePath, 'utf8')
 
-site = site.replace("const categories=['All',...Array.from(new Set(products.map(p=>p.category).filter(Boolean) as string[]))]", "const categories=['All','Aviation','Nature Art','Wildlife Art']")
-site = site.replace("supabase.from('products').select('id,name,slug,price,short_description,description,category_id,product_images(storage_path)').eq('is_active',true).then(({data})=>{if(data?.length)setProducts(data.map((p:any)=>({...p,category:p.category_id,images:(p.product_images||[]).map((x:any)=>x.storage_path),price:349})))})", "supabase.from('products').select('id,name,slug,price,short_description,description,category_id,categories(name),product_images(storage_path)').eq('is_active',true).then(({data})=>{if(data?.length)setProducts(data.map((p:any)=>({...p,category:p.categories?.name||null,images:(p.product_images||[]).map((x:any)=>x.storage_path)})))})")
-site = site.replace("<Scene title=\"C O M M E R C I A L\" image={editorial.commercial} eyebrow=\"01 / Modern aviation\" nav={nav}/><Scene title=\"M I L I T A R Y\" image={editorial.military} eyebrow=\"02 / Power & precision\" nav={nav}/><Scene title=\"H I S T O R I C\" image={editorial.historic} eyebrow=\"03 / Aviation heritage\" nav={nav}/>", "<Scene title=\"A V I A T I O N\" image={editorial.commercial} eyebrow=\"01 / Aviation photography\" nav={nav}/><Scene title=\"N A T U R E\" image={editorial.military} eyebrow=\"02 / Nature photography\" nav={nav}/><Scene title=\"W I L D L I F E\" image={editorial.historic} eyebrow=\"03 / Wildlife photography\" nav={nav}/>")
-site = site.replace("<div className=\"eyebrow\">SkyShotConner / Aviation Art</div><h1 className=\"display\">THE ART<br/>OF FLIGHT.</h1><p>Premium aviation canvas artwork for those who live to fly.</p>", "<div className=\"eyebrow\">SkyShotConner / Photography & Fine Art</div><h1 className=\"display\">PHOTOGRAPHY.<br/>MADE ART.</h1><p>Aviation, nature and wildlife photography transformed into premium canvas artwork.</p>")
-site = site.replace("<p>Four aviation artworks. Five canvas sizes. Each photograph is prepared as a piece of wall art.</p>", "<p>Aviation, nature and wildlife photography. Each photograph is prepared as a piece of wall art.</p>")
-site = site.replace("<h2 className=\"section-title\">Icons of aviation.</h2>", "<h2 className=\"section-title\">Selected works.</h2>")
-site = site.replace("<p>Every SkyShotConner canvas begins with a moment in flight — frozen, refined and made tangible. From airliners to warbirds, each piece is photographed with the intention of becoming art.</p>", "<p>Every SkyShotConner canvas begins with a moment worth remembering — frozen, refined and made tangible. From aircraft to landscapes and wildlife, each photograph is created with the intention of becoming art.</p>")
-site = site.replace("<div className=\"eyebrow\">Selected works</div>", "<div className=\"eyebrow\">Selected photography</div>")
-site = site.replace("<div className=\"eyebrow\">{product.category||'Aviation Art'}</div>", "<div className=\"eyebrow\">{product.category||'Photography & Fine Art'}</div>")
+// Use regex-based replacements so harmless formatting changes made by earlier
+// prebuild scripts cannot silently prevent the photography update.
+site = mustReplace(site, /const categories=\['All',[\s\S]*?\]\n const filtered=/, "const categories=['All','Aviation','Nature Art','Wildlife Art']\n const filtered=", 'shop categories')
+site = mustReplace(site, /supabase\.from\('products'\)\.select\('id,name,slug,price,short_description,description,category_id,product_images\(storage_path\)'\)\.eq\('is_active',true\)\.then\(\(\{data\}\)=>\{if\(data\?\.length\)setProducts\(data\.map\(\(p:any\)=>\(\{\.\.\.p,category:p\.category_id,images:\(p\.product_images\|\|\[\]\)\.map\(\(x:any\)=>x\.storage_path\),price:349\}\)\)\)\}\)\)/, "supabase.from('products').select('id,name,slug,price,short_description,description,category_id,categories(name),product_images(storage_path)').eq('is_active',true).then(({data,error})=>{if(data?.length&&!error)setProducts(data.map((p:any)=>({...p,category:p.categories?.name||null,images:(p.product_images||[]).map((x:any)=>x.storage_path)})))})", 'product category query')
+site = mustReplace(site, /<Scene title="C O M M E R C I A L"[\s\S]*?<Scene title="H I S T O R I C" image=\{editorial\.historic\} eyebrow="03 \/ Aviation heritage" nav=\{nav\}\/>/, '<Scene title="A V I A T I O N" image={editorial.commercial} eyebrow="01 / Aviation photography" nav={nav}/><Scene title="N A T U R E" image={editorial.military} eyebrow="02 / Nature photography" nav={nav}/><Scene title="W I L D L I F E" image={editorial.historic} eyebrow="03 / Wildlife photography" nav={nav}/>', 'homepage category scenes')
+site = mustReplace(site, /<div className="eyebrow">SkyShotConner \/ Aviation Art<\/div><h1 className="display">THE ART<br\/>OF FLIGHT\.<\/h1><p>Premium aviation canvas artwork for those who live to fly\.<\/p>/, '<div className="eyebrow">SkyShotConner / Photography & Fine Art</div><h1 className="display">PHOTOGRAPHY.<br/>MADE ART.</h1><p>Aviation, nature and wildlife photography transformed into premium canvas artwork.</p>', 'hero copy')
+site = site.replace('Four aviation artworks. Five canvas sizes. Each photograph is prepared as a piece of wall art.', 'Aviation, nature and wildlife photography. Each photograph is prepared as a piece of wall art.')
+site = site.replace('Icons of aviation.', 'Selected works.')
+site = site.replace('Every SkyShotConner canvas begins with a moment in flight — frozen, refined and made tangible. From airliners to warbirds, each piece is photographed with the intention of becoming art.', 'Every SkyShotConner canvas begins with a moment worth remembering — frozen, refined and made tangible. From aircraft to landscapes and wildlife, each photograph is created with the intention of becoming art.')
+site = site.replace('<div className="eyebrow">Selected works</div>', '<div className="eyebrow">Selected photography</div>')
+site = site.replace("{product.category||'Aviation Art'}", "{product.category||'Photography & Fine Art'}")
 site = site.replace("category:'Commercial'", "category:'Aviation'").replace("category:'Historic'", "category:'Aviation'").replace("category:'Cockpit'", "category:'Aviation'")
+
+if (!site.includes('PHOTOGRAPHY.<br/>MADE ART.') || !site.includes('A V I A T I O N') || !site.includes("['All','Aviation','Nature Art','Wildlife Art']")) {
+  throw new Error('Photography update validation failed')
+}
 fs.writeFileSync(sitePath, site)
 
 let admin = fs.readFileSync(adminPath, 'utf8')
