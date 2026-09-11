@@ -14,13 +14,5 @@ if(authStart>=0&&authEnd>authStart){
  s=s.slice(0,authStart)+authFn+s.slice(authEnd)
 }
 
-// Make verification state refresh from Supabase and render a visible badge.
-const accountStart=s.indexOf('function Account(')
-const accountEnd=s.indexOf('function About(',accountStart)
-if(accountStart>=0&&accountEnd>accountStart){
- const accountFn=`function Account({user,nav,supabase}:{user:any;nav:(x:string)=>void;supabase:any}){const [verified,setVerified]=useState(!!user?.email_confirmed_at||!!user?.confirmed_at);useEffect(()=>{let alive=true;async function refresh(){const {data}=await supabase.auth.getUser();if(alive&&data?.user)setVerified(!!data.user.email_confirmed_at||!!data.user.confirmed_at)}refresh();return()=>{alive=false}},[supabase,user?.id]);if(!user)return <main className=\"page container\"><div className=\"eyebrow\">Account</div><h1 className=\"page-title\">SIGN IN TO<br/>CONTINUE.</h1><button className=\"primary max-w-md\" onClick={()=>nav('/login')}>Sign in</button></main>;return <main className=\"page container\"><div className=\"account-head\"><div><div className=\"eyebrow\">Account</div><h1 className=\"page-title\">YOUR<br/>FLIGHT LOG.</h1></div>{verified&&<div className=\"verified-badge\" data-verified-badge><span>✓</span> VERIFIED</div>}</div><div className=\"notice\" style={{marginBottom:24}}><b>{verified?'✓ Email verified':'Email not verified'}</b><br/><small>{user.email}</small></div><div className=\"account-grid\"><button className=\"notice text-left\" onClick={()=>nav('/account/orders')}>Orders<br/><small>View your purchases</small></button><button className=\"notice text-left\" onClick={()=>nav('/wishlist')}>Saved Works<br/><small>Your saved artworks</small></button><button className=\"notice text-left\" onClick={async()=>{await supabase.auth.signOut();location.reload()}}>Logout<br/><small>End session</small></button></div></main>}`
- s=s.slice(0,accountStart)+accountFn+s.slice(accountEnd)
-}
-
 fs.writeFileSync(file,s)
 console.log('Final auth UI applied')
