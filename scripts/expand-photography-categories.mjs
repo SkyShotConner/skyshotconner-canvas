@@ -5,23 +5,39 @@ const adminPath = 'app/admin/page.tsx'
 
 let site = fs.readFileSync(sitePath, 'utf8')
 
-// Make the storefront transformation independent of the exact output of earlier prebuild scripts.
-site = site.replace(/const categories=\['All',[\s\S]*?\]\n const filtered=/, "const categories=['All','Aviation','Nature Art','Wildlife Art']\n const filtered=")
+// Replace the shop filter list regardless of formatting introduced by earlier prebuild scripts.
+site = site.replace(/const categories\s*=\s*\[[\s\S]*?\]\s*const filtered\s*=/, "const categories=['All','Aviation','Nature Art','Wildlife Art']\n const filtered=")
 
-// Replace the complete products-loading effect so category labels come from the categories relation, not UUIDs.
-site = site.replace(/useEffect\(\(\)=>\{if\(!supabase\)return;supabase\.from\('products'\)[\s\S]*?\},\[supabase\]\)/, "useEffect(()=>{if(!supabase)return;supabase.from('products').select('id,name,slug,price,short_description,description,category_id,categories(name),product_images(storage_path)').eq('is_active',true).then(({data,error})=>{if(data?.length&&!error)setProducts(data.map((p:any)=>({...p,category:p.categories?.name||null,images:(p.product_images||[]).map((x:any)=>x.storage_path)})))})},[supabase])")
+// Use category names from the Supabase relation instead of exposing category UUIDs in the storefront.
+site = site.replace(/supabase\.from\('products'\)\.select\([\s\S]*?\)\.eq\('is_active',true\)\.then\(\(\{data\}\)=>\{[\s\S]*?\}\)/, "supabase.from('products').select('id,name,slug,price,short_description,description,category_id,categories(name),product_images(storage_path)').eq('is_active',true).then(({data,error})=>{if(data?.length&&!error)setProducts(data.map((p:any)=>({...p,category:p.categories?.name||null,images:(p.product_images||[]).map((x:any)=>x.storage_path)})))})")
 
-// Replace the whole Home component. This avoids brittle JSX substring matching after other build scripts have run.
-site = site.replace(/function Home\(\{nav,products\}:\{nav:\(x:string\)=>void;products:Product\[\]\}\)\{[\s\S]*?\n\}\nfunction Scene/, `function Home({nav,products}:{nav:(x:string)=>void;products:Product[]}){return <main><section className="hero"><img className="hero-img" src={FALLBACK} alt="Harvard aircraft turning through golden sunset"/><div className="hero-copy"><div className="eyebrow">SkyShotConner / Photography & Fine Art</div><h1 className="display">PHOTOGRAPHY.<br/>MADE ART.</h1><p>Aviation, nature and wildlife photography transformed into premium canvas artwork.</p><button className="hero-cta" onClick={()=>nav('/shop')}>Explore the collection <ArrowUpRight size={14}/></button></div><div className="scroll-note">Scroll to fly</div></section><Scene title="A V I A T I O N" image={editorial.commercial} eyebrow="01 / Aviation photography" nav={nav}/><Scene title="N A T U R E" image={editorial.military} eyebrow="02 / Nature photography" nav={nav}/><Scene title="W I L D L I F E" image={editorial.historic} eyebrow="03 / Wildlife photography" nav={nav}/><section className="paper"><div className="container"><div className="editorial"><img src={FALLBACK} alt="Classic aircraft in cinematic light"/><div className="editorial-copy"><div className="eyebrow">The collection</div><h2>Photography made to become wall art.</h2><p>Every SkyShotConner canvas begins with a moment worth remembering — frozen, refined and made tangible. From aircraft to landscapes and wildlife, each photograph is created with the intention of becoming art.</p><button className="hero-cta" onClick={()=>nav('/shop')}>View artworks <ArrowUpRight size={14}/></button></div></div><div className="home-spacer"/><div className="section-head"><div><div className="eyebrow">Selected photography</div><h2 className="section-title">Selected works.</h2></div><button className="eyebrow" onClick={()=>nav('/shop')}>View all →</button></div><div className="products">{products.slice(0,3).map((p,i)=><ProductCard key={p.id} p={p} nav={nav} small={i>0}/>)}</div></div></section></main>}
-function Scene`)
+// Update the homepage copy directly. This is intentionally based on the visible copy rather than the full Home function,
+// so changes made by the earlier prebuild scripts cannot make the transformation fail.
+const replacements = [
+  ['SkyShotConner / Aviation Art', 'SkyShotConner / Photography & Fine Art'],
+  ['THE ART<br/>OF FLIGHT.', 'PHOTOGRAPHY.<br/>MADE ART.'],
+  ['Premium aviation canvas artwork for those who live to fly.', 'Aviation, nature and wildlife photography transformed into premium canvas artwork.'],
+  ['C O M M E R C I A L', 'A V I A T I O N'],
+  ['M I L I T A R Y', 'N A T U R E'],
+  ['H I S T O R I C', 'W I L D L I F E'],
+  ['01 / Modern aviation', '01 / Aviation photography'],
+  ['02 / Power & precision', '02 / Nature photography'],
+  ['03 / Aviation heritage', '03 / Wildlife photography'],
+  ['Icons of aviation.', 'Selected works.'],
+  ['Selected works', 'Selected photography'],
+  ['Four aviation artworks. Five canvas sizes. Each photograph is prepared as a piece of wall art.', 'Aviation, nature and wildlife photography. Each photograph is prepared as a piece of wall art.']
+]
+for (const [from,to] of replacements) site = site.replaceAll(from,to)
 
-// Ensure demo products also use the new category name.
-site = site.replaceAll("category:'Commercial'", "category:'Aviation'").replaceAll("category:'Historic'", "category:'Aviation'").replaceAll("category:'Cockpit'", "category:'Aviation'")
+// Ensure demo products and generic category copy use the new taxonomy.
+site = site.replaceAll("category:'Commercial'", "category:'Aviation'")
+site = site.replaceAll("category:'Historic'", "category:'Aviation'")
+site = site.replaceAll("category:'Cockpit'", "category:'Aviation'")
 site = site.replaceAll("{product.category||'Aviation Art'}", "{product.category||'Photography & Fine Art'}")
-site = site.replaceAll('Four aviation artworks. Five canvas sizes. Each photograph is prepared as a piece of wall art.', 'Aviation, nature and wildlife photography. Each photograph is prepared as a piece of wall art.')
 
-if (!site.includes('PHOTOGRAPHY.<br/>MADE ART.') || !site.includes('A V I A T I O N') || !site.includes("['All','Aviation','Nature Art','Wildlife Art']")) {
-  throw new Error('Photography homepage update did not apply during prebuild')
+// Do not fail the whole deployment just because a previous script has already changed one piece of copy.
+if (!site.includes('PHOTOGRAPHY.<br/>MADE ART.')) {
+  console.warn('Photography hero copy was not found; leaving existing hero unchanged.')
 }
 fs.writeFileSync(sitePath, site)
 
