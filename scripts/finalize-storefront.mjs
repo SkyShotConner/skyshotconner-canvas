@@ -37,7 +37,7 @@ s=s.replace(/function Home\(([^\n]+)\)return /, 'function Home($1){return ')
 if(!/function siteImage\(/.test(s)){
   const anchor="function imgFor(p:Product){"
   if(!s.includes(anchor)) throw new Error('Unable to locate image helper anchor')
-  s=s.replace(anchor,"function siteImage(images:Record<string,string>,key:string,fallback:string){return images[key]||fallback}\n"+anchor)
+  s=s.replace(anchor,"function siteImage(images:Record<string,string>|undefined,key:string,fallback:string){return images?.[key]||fallback}\n"+anchor)
 }
 
 s=s.replace("type Product={id:string;name:string;slug:string;price:number;short_description?:string|null;description?:string|null;category?:string|null;images:string[]}","type Product={id:string;name:string;slug:string;price:number;short_description?:string|null;description?:string|null;category?:string|null;images:string[];orientation?:'landscape'|'portrait';limited_edition?:boolean}")
