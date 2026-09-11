@@ -20,11 +20,17 @@ const replacements = [
   ['C O M M E R C I A L', 'A V I A T I O N'],
   ['M I L I T A R Y', 'N A T U R E'],
   ['H I S T O R I C', 'W I L D L I F E'],
+  ['title="MODERN"', 'title="AVIATION"'],
+  ['title="MILITARY"', 'title="NATURE"'],
+  ['title="HISTORIC"', 'title="WILDLIFE"'],
   ['01 / Modern aviation', '01 / Aviation photography'],
   ['02 / Power & precision', '02 / Nature photography'],
   ['03 / Aviation heritage', '03 / Wildlife photography'],
   ['Icons of aviation.', 'Selected works.'],
   ['Selected works', 'Selected photography'],
+  ['The collection', 'The photography'],
+  ['Aircraft are not just machines. They are stories.', 'Photography captures moments, places and stories.'],
+  ['Every SkyShotConner canvas begins with a moment in flight.', 'Every SkyShotConner canvas begins with an original photograph.'],
   ['Four aviation artworks. Five canvas sizes. Each photograph is prepared as a piece of wall art.', 'Aviation, nature and wildlife photography. Each photograph is prepared as a piece of wall art.']
 ]
 for (const [from,to] of replacements) site = site.replaceAll(from,to)
