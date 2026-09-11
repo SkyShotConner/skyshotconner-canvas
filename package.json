@@ -4,7 +4,7 @@
   "private":true,
   "scripts":{
     "dev":"next dev",
-    "prebuild":"node scripts/patch-storefront.mjs && node scripts/enhance-storefront.mjs && node scripts/finalize-storefront.mjs && node scripts/rebuild-collection-layout.mjs && node scripts/remove-legacy-images.mjs && node scripts/add-admin-users.mjs && node scripts/add-paystack-checkout.mjs && node scripts/performance-optimization.mjs && node scripts/add-cart-toast.mjs && node scripts/add-password-reset-flow.mjs && node scripts/add-password-reset-page.mjs && node scripts/add-auth-success-pages.mjs && node scripts/fix-auth-callback-syntax.mjs && node scripts/update-legal-pages.mjs && node scripts/ensure-admin-users-component.mjs && node scripts/add-account-enhancements.mjs && node scripts/expand-photography-categories.mjs",
+    "prebuild":"node scripts/patch-storefront.mjs && node scripts/enhance-storefront.mjs && node scripts/finalize-storefront.mjs && node scripts/rebuild-collection-layout.mjs && node scripts/remove-legacy-images.mjs && node scripts/add-admin-users.mjs && node scripts/add-paystack-checkout.mjs && node scripts/performance-optimization.mjs && node scripts/add-cart-toast.mjs && node scripts/add-password-reset-flow.mjs && node scripts/add-password-reset-page.mjs && node scripts/add-auth-success-pages.mjs && node scripts/fix-auth-callback-syntax.mjs && node scripts/update-legal-pages.mjs && node scripts/ensure-admin-users-component.mjs && node scripts/add-account-enhancements.mjs && node scripts/expand-photography-categories.mjs && node scripts/add-email-verification-status.mjs",
     "build":"next build",
     "start":"next start",
     "lint":"next lint"
