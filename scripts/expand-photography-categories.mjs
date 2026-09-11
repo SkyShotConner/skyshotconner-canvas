@@ -5,14 +5,14 @@ const adminPath = 'app/admin/page.tsx'
 
 let site = fs.readFileSync(sitePath, 'utf8')
 
-// Replace the shop filter list regardless of formatting introduced by earlier prebuild scripts.
 site = site.replace(/const categories\s*=\s*\[[\s\S]*?\]\s*const filtered\s*=/, "const categories=['All','Aviation','Nature Art','Wildlife Art']\n const filtered=")
 
-// Use category names from the Supabase relation instead of exposing category UUIDs in the storefront.
-site = site.replace(/supabase\.from\('products'\)\.select\([\s\S]*?\)\.eq\('is_active',true\)\.then\(\(\{data\}\)=>\{[\s\S]*?\}\)/, "supabase.from('products').select('id,name,slug,price,short_description,description,category_id,categories(name),product_images(storage_path)').eq('is_active',true).then(({data,error})=>{if(data?.length&&!error){setProducts(data.map((p:any)=>({...p,category:p.categories?.name||null,images:(p.product_images||[]).map((x:any)=>x.storage_path)})))}}),[supabase])")
+// Replace only the product-loading effect. Matching through the following nav declaration
+// prevents nested callback braces from being consumed by the replacement regex.
+const productEffect = /useEffect\(\(\)=>\{if\(!supabase\)return;supabase\.from\('products'\)[\s\S]*?\n const nav=/
+const productEffectReplacement = "useEffect(()=>{if(!supabase)return;supabase.from('products').select('id,name,slug,price,short_description,description,category_id,categories(name),product_images(storage_path)').eq('is_active',true).then(({data,error})=>{if(data?.length&&!error){setProducts(data.map((p:any)=>({...p,category:p.categories?.name||null,images:(p.product_images||[]).map((x:any)=>x.storage_path)})))}})},[supabase])\n const nav="
+site = site.replace(productEffect, productEffectReplacement)
 
-// Update the homepage copy directly. This is intentionally based on the visible copy rather than the full Home function,
-// so changes made by the earlier prebuild scripts cannot make the transformation fail.
 const replacements = [
   ['SkyShotConner / Aviation Art', 'SkyShotConner / Photography & Fine Art'],
   ['THE ART<br/>OF FLIGHT.', 'PHOTOGRAPHY.<br/>MADE ART.'],
@@ -29,15 +29,13 @@ const replacements = [
 ]
 for (const [from,to] of replacements) site = site.replaceAll(from,to)
 
-// Ensure demo products and generic category copy use the new taxonomy.
 site = site.replaceAll("category:'Commercial'", "category:'Aviation'")
 site = site.replaceAll("category:'Historic'", "category:'Aviation'")
 site = site.replaceAll("category:'Cockpit'", "category:'Aviation'")
 site = site.replaceAll("{product.category||'Aviation Art'}", "{product.category||'Photography & Fine Art'}")
 
-// Do not fail the whole deployment just because a previous script has already changed one piece of copy.
-if (!site.includes('PHOTOGRAPHY.<br/>MADE ART.')) {
-  console.warn('Photography hero copy was not found; leaving existing hero unchanged.')
+if (!site.includes("const categories=['All','Aviation','Nature Art','Wildlife Art']")) {
+  console.warn('Photography shop category filter was not found; leaving existing filter unchanged.')
 }
 fs.writeFileSync(sitePath, site)
 
