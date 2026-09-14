@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
     const { data: order, error } = await supabase
       .from('orders')
-      .select('id,user_id,total,customer_name,customer_email,payment_status,paystack_reference')
+      .select('id,user_id,total,customer_name,customer_email,payment_status')
       .eq('id', orderId)
       .eq('user_id', user.id)
       .single()
@@ -36,7 +36,17 @@ export async function POST(request: Request) {
     if (error || !order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     if (order.payment_status === 'paid') return NextResponse.json({ error: 'Order is already paid' }, { status: 409 })
 
-    const reference = order.paystack_reference || `SSC-${order.id}`
+    const total = Number(order.total)
+    if (!Number.isFinite(total) || total <= 0) {
+      return NextResponse.json({ error: 'Order total is invalid' }, { status: 400 })
+    }
+
+    const email = String(order.customer_email || user.email || '').trim()
+    if (!email) return NextResponse.json({ error: 'A customer email is required for payment.' }, { status: 400 })
+
+    // Paystack requires a unique reference for every initialization attempt.
+    // A fresh reference also allows a customer to retry an abandoned/expired checkout safely.
+    const reference = `SSC-${order.id}-${Date.now()}`
     const origin = new URL(request.url).origin
 
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
@@ -46,8 +56,8 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        email: String(order.customer_email || user.email || ''),
-        amount: Math.round(Number(order.total) * 100),
+        email,
+        amount: Math.round(total * 100),
         currency: 'ZAR',
         reference,
         callback_url: `${origin}/order-confirmation?reference=${encodeURIComponent(reference)}`,
@@ -61,18 +71,30 @@ export async function POST(request: Request) {
     })
 
     const result = await response.json()
-    if (!response.ok || !result?.status || !result?.data?.authorization_url) {
+    if (!response.ok || !result?.status || !result?.data?.authorization_url || !result?.data?.reference) {
+      console.error('Paystack initialization failed', result)
       return NextResponse.json({ error: result?.message || 'Paystack could not initialize the payment.' }, { status: 502 })
     }
 
-    await supabase.from('orders').update({
+    const paystackReference = String(result.data.reference)
+    if (paystackReference !== reference) {
+      console.error('Paystack returned an unexpected transaction reference')
+      return NextResponse.json({ error: 'Payment reference validation failed.' }, { status: 502 })
+    }
+
+    const { error: updateError } = await supabase.from('orders').update({
       payment_provider: 'paystack',
-      paystack_reference: result.data.reference || reference,
+      paystack_reference: paystackReference,
     }).eq('id', order.id)
+
+    if (updateError) {
+      console.error('Could not save Paystack reference', updateError)
+      return NextResponse.json({ error: 'Could not save payment session.' }, { status: 500 })
+    }
 
     return NextResponse.json({
       authorization_url: result.data.authorization_url,
-      reference: result.data.reference || reference,
+      reference: paystackReference,
     })
   } catch (error: any) {
     console.error('Paystack initialize error', error)
