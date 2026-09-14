@@ -6,50 +6,74 @@ export const runtime = 'nodejs'
 export async function GET(request: Request) {
   try {
     const reference = new URL(request.url).searchParams.get('reference') || ''
-    if (!reference) return NextResponse.json({ error: 'Missing reference' }, { status: 400 })
+    if (!reference || reference.length > 200) {
+      return NextResponse.json({ error: 'Invalid or missing reference' }, { status: 400 })
+    }
 
     const secret = process.env.PAYSTACK_SECRET_KEY
-    if (!secret) return NextResponse.json({ error: 'Paystack is not configured' }, { status: 500 })
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!secret || !supabaseUrl || !serviceRoleKey) {
+      console.error('Paystack verification is missing server configuration')
+      return NextResponse.json({ status: 'pending' }, { status: 500 })
+    }
 
     const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
       headers: { Authorization: `Bearer ${secret}` },
       cache: 'no-store',
     })
     const result = await response.json()
-    if (!response.ok || !result?.status) return NextResponse.json({ status: 'pending' })
+    if (!response.ok || !result?.status || !result?.data) {
+      return NextResponse.json({ status: 'pending' })
+    }
 
     const transaction = result.data
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { autoRefreshToken: false, persistSession: false } },
-    )
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
 
-    const { data: order } = await supabase
+    const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('id,total,payment_status')
+      .select('id,total,payment_status,paystack_reference')
       .eq('paystack_reference', reference)
-      .single()
+      .maybeSingle()
 
+    if (orderError) {
+      console.error('Could not load order for Paystack verification', orderError)
+      return NextResponse.json({ status: 'pending' }, { status: 500 })
+    }
     if (!order) return NextResponse.json({ status: 'pending' })
 
-    const amountMatches = Math.abs(Number(transaction.amount || 0) / 100 - Number(order.total)) <= 0.01
+    const referenceMatches = String(transaction.reference || '') === reference
+    const expectedAmount = Math.round(Number(order.total) * 100)
+    const amountMatches = Number.isFinite(expectedAmount) && Number(transaction.amount) === expectedAmount
     const currencyMatches = String(transaction.currency || '').toUpperCase() === 'ZAR'
+    const metadataOrderId = transaction.metadata?.order_id
+    const metadataMatches = metadataOrderId == null || String(metadataOrderId) === String(order.id)
 
-    if (transaction.status === 'success' && amountMatches && currencyMatches) {
-      await supabase.from('orders').update({
+    if (transaction.status === 'success' && referenceMatches && amountMatches && currencyMatches && metadataMatches) {
+      if (order.payment_status === 'paid') {
+        return NextResponse.json({ status: 'paid', order_id: order.id })
+      }
+
+      const { error: updateError } = await supabase.from('orders').update({
         payment_provider: 'paystack',
         payment_status: 'paid',
         status: 'paid',
-        paystack_payment_id: transaction.id || null,
-        paid_at: new Date().toISOString(),
-      }).eq('id', order.id)
+        paystack_payment_id: transaction.id == null ? null : String(transaction.id),
+        paid_at: transaction.paid_at || new Date().toISOString(),
+      }).eq('id', order.id).neq('payment_status', 'paid')
+
+      if (updateError) {
+        console.error('Could not mark verified Paystack order as paid', updateError)
+        return NextResponse.json({ status: 'pending' }, { status: 500 })
+      }
       return NextResponse.json({ status: 'paid', order_id: order.id })
     }
 
     return NextResponse.json({ status: transaction.status || 'pending', order_id: order.id })
   } catch (error) {
     console.error('Paystack verification error', error)
-    return NextResponse.json({ status: 'pending' })
+    return NextResponse.json({ status: 'pending' }, { status: 500 })
   }
 }
