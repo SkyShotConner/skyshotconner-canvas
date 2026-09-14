@@ -6,6 +6,7 @@ import './info-pages.css'
 import './collection-rebuild.css'
 import './admin-users.css'
 import './mobile-landing-fixes.css'
+import './about-editorial.css'
 import ProductCardOrientation from './components/ProductCardOrientation'
 import FaviconSync from './components/FaviconSync'
 
