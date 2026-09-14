@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Search, ShoppingBag, User, Heart } from 'lucide-react'
+import { Search, ShoppingBag, User, Heart, SlidersHorizontal, ChevronDown } from 'lucide-react'
 import { createClient, storageUrl } from '@/lib/supabase/client'
 import './shop.css'
 
@@ -15,11 +15,13 @@ type Product = {
   short_description?: string | null
   description?: string | null
   orientation: Orientation
+  category?: string | null
   images: string[]
 }
 
 const CANVAS_PRICES: Record<string, number> = { A5: 349, A4: 449, A3: 549, A2: 749, A1: 1099 }
 const CANVAS_SIZES = ['A5', 'A4', 'A3', 'A2', 'A1']
+const CATEGORY_FILTERS = ['All', 'Aviation Art', 'Nature Art', 'Wildlife Art']
 
 function money(value: number) {
   return new Intl.NumberFormat('en-ZA', {
@@ -50,7 +52,7 @@ function ProductCard({ product }: { product: Product }) {
       </div>
       <div className="ssc-shop-meta">
         <div className="ssc-shop-name">{product.name}</div>
-        <div className="ssc-shop-sub">{product.short_description || 'Premium aviation canvas artwork'}</div>
+        <div className="ssc-shop-sub">{product.short_description || 'Premium wall art photography'}</div>
         <div className="ssc-shop-price-list">
           {CANVAS_SIZES.map(size => (
             <span key={size}><b>{size}</b> {money(CANVAS_PRICES[size])}</span>
@@ -131,6 +133,8 @@ export default function ShopPage() {
   const supabase = useMemo(() => createClient(), [])
   const [products, setProducts] = useState<Product[]>([])
   const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState('All')
+  const [filterOpen, setFilterOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -148,7 +152,7 @@ export default function ShopPage() {
 
       const { data, error: loadError } = await supabase
         .from('products')
-        .select('id,name,slug,price,short_description,description,orientation,created_at,product_images(storage_path,is_primary,sort_order)')
+        .select('id,name,slug,price,short_description,description,orientation,created_at,category:categories(name),product_images(storage_path,is_primary,sort_order)')
         .eq('is_active', true)
         .order('created_at', { ascending: true })
 
@@ -170,6 +174,7 @@ export default function ShopPage() {
           short_description: product.short_description,
           description: product.description,
           orientation: product.orientation,
+          category: product.category?.name || null,
           images: (product.product_images || [])
             .slice()
             .sort((a: any, b: any) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary)) || (a.sort_order || 0) - (b.sort_order || 0))
@@ -185,9 +190,13 @@ export default function ShopPage() {
   }, [supabase])
 
   const filteredProducts = products.filter(product => {
-    const text = `${product.name} ${product.short_description || ''}`.toLowerCase()
-    return text.includes(query.trim().toLowerCase())
+    const text = `${product.name} ${product.short_description || ''} ${product.category || ''}`.toLowerCase()
+    const matchesSearch = text.includes(query.trim().toLowerCase())
+    const matchesCategory = filter === 'All' || product.category === filter
+    return matchesSearch && matchesCategory
   })
+
+  const go = (path: string) => { window.location.href = path }
 
   return (
     <div className="ssc-shop-page">
@@ -207,23 +216,39 @@ export default function ShopPage() {
       <main className="ssc-shop-shell">
         <section className="ssc-shop-intro">
           <div>
-            <div className="ssc-shop-eyebrow">SkyShotConner / Aviation Art</div>
+            <div className="ssc-shop-eyebrow">SkyShotConner / Photography Art</div>
             <h1>THE<br />COLLECTION.</h1>
           </div>
-          <p>Original aviation photography prepared as premium canvas artwork.</p>
+          <p>Original photography prepared as premium canvas artwork.</p>
         </section>
 
         <div className="ssc-shop-toolbar">
           <span>{filteredProducts.length} artworks</span>
-          <label className="ssc-shop-search">
-            <Search size={14} />
-            <input value={query} onChange={event => setQuery(event.target.value)} placeholder="SEARCH THE COLLECTION" aria-label="Search the collection" />
-          </label>
+          <div className="ssc-shop-controls">
+            <label className="ssc-shop-search">
+              <Search size={14} />
+              <input value={query} onChange={event => setQuery(event.target.value)} placeholder="SEARCH THE COLLECTION" aria-label="Search the collection" />
+            </label>
+            <div className="ssc-shop-filter-wrap">
+              <button className="ssc-shop-filter-button" onClick={() => setFilterOpen(open => !open)} aria-expanded={filterOpen}>
+                <SlidersHorizontal size={14} /> {filter === 'All' ? 'Filter' : filter} <ChevronDown size={12} />
+              </button>
+              {filterOpen && (
+                <div className="ssc-shop-filter-menu">
+                  {CATEGORY_FILTERS.map(category => (
+                    <button key={category} className={filter === category ? 'active' : ''} onClick={() => { setFilter(category); setFilterOpen(false) }}>
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {loading && <div className="ssc-shop-status">Loading collection…</div>}
         {!loading && error && <div className="ssc-shop-status">{error}</div>}
-        {!loading && !error && filteredProducts.length === 0 && <div className="ssc-shop-status">No artworks match your search.</div>}
+        {!loading && !error && filteredProducts.length === 0 && <div className="ssc-shop-status">No artworks match your search or filter.</div>}
         {!loading && !error && filteredProducts.length > 0 && (
           <>
             <DesktopRows products={filteredProducts} />
@@ -232,9 +257,33 @@ export default function ShopPage() {
         )}
       </main>
 
-      <footer className="ssc-shop-footer">
-        <span>SKYSHOTCONNER</span>
-        <span>The Art of Flight</span>
+      <footer className="footer">
+        <div className="container footer-grid">
+          <div>
+            <div className="brand">SKYSHOTCONNER</div>
+            <p style={{ maxWidth: 300 }}>Photography captured as art. Premium canvas pieces made for people who notice the moment.</p>
+          </div>
+          <div>
+            <h3>Explore</h3>
+            <button onClick={() => go('/shop')}>Collection</button><br />
+            <button onClick={() => { setFilter('Aviation Art'); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Aviation Art</button><br />
+            <button onClick={() => go('/about')}>About</button>
+          </div>
+          <div>
+            <h3>Help</h3>
+            <button onClick={() => go('/contact')}>Contact</button><br />
+            <button onClick={() => go('/faq')}>FAQ</button><br />
+            <button onClick={() => go('/shipping-returns')}>Shipping</button>
+          </div>
+          <div>
+            <h3>Legal</h3>
+            <button onClick={() => go('/privacy')}>Privacy</button><br />
+            <button onClick={() => go('/terms')}>Terms</button>
+          </div>
+        </div>
+        <div className="container footer-bottom">
+          <p>© {new Date().getFullYear()} SkyShotConner. The Art of Flight.</p>
+        </div>
       </footer>
     </div>
   )
