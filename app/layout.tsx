@@ -6,6 +6,7 @@ import './info-pages.css'
 import './collection-rebuild.css'
 import './admin-users.css'
 import ProductCardOrientation from './components/ProductCardOrientation'
+import FaviconSync from './components/FaviconSync'
 
 export const metadata: Metadata = {
   title: 'SkyShotConner — The Art of Flight',
@@ -14,5 +15,5 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body><ProductCardOrientation/>{children}</body></html>
+  return <html lang="en"><body><FaviconSync/><ProductCardOrientation/>{children}</body></html>
 }
