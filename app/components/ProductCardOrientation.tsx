@@ -38,46 +38,74 @@ function applyOrientation(card: HTMLElement) {
   return setOrientation(card, image.naturalWidth, image.naturalHeight)
 }
 
-function buildPattern(cards: HTMLElement[], landscapeCount: number, portraitCount: number) {
-  const landscapes = cards.filter(card => card.dataset.orientation === 'landscape')
-  const portraits = cards.filter(card => card.dataset.orientation === 'portrait')
-  const squares = cards.filter(card => card.dataset.orientation === 'square')
-  const unknown = cards.filter(card => !card.dataset.orientation)
-  const arranged: HTMLElement[] = []
-
-  let landscapeIndex = 0
-  let portraitIndex = 0
-
-  while (landscapeIndex < landscapes.length || portraitIndex < portraits.length) {
-    for (let i = 0; i < landscapeCount && landscapeIndex < landscapes.length; i += 1) {
-      arranged.push(landscapes[landscapeIndex++])
-    }
-
-    for (let i = 0; i < portraitCount && portraitIndex < portraits.length; i += 1) {
-      arranged.push(portraits[portraitIndex++])
-    }
-  }
-
-  arranged.push(...squares, ...unknown)
-  return arranged
-}
-
 function arrangeGrid(grid: HTMLElement) {
   const cards = Array.from(grid.querySelectorAll<HTMLElement>(':scope > .product-card'))
   if (!cards.length) return
 
   const isMobile = window.matchMedia('(max-width: 800px)').matches
-  const arranged = buildPattern(cards, isMobile ? 1 : 2, isMobile ? 2 : 3)
+  const landscapes = cards.filter(card => card.dataset.orientation === 'landscape')
+  const portraits = cards.filter(card => card.dataset.orientation === 'portrait')
+  const squares = cards.filter(card => card.dataset.orientation === 'square')
+  const unknown = cards.filter(card => !card.dataset.orientation)
 
-  arranged.forEach((card, index) => {
-    card.style.setProperty('order', String(index + 1), 'important')
+  // Reset explicit placement before rebuilding the pattern.
+  cards.forEach(card => {
+    card.style.removeProperty('grid-row')
+    card.style.removeProperty('grid-column')
+    card.style.removeProperty('order')
+  })
 
-    const orientation = card.dataset.orientation
-    if (orientation === 'landscape') {
-      card.style.setProperty('grid-column', isMobile ? 'span 2' : 'span 3', 'important')
-    } else if (orientation === 'portrait' || orientation === 'square') {
-      card.style.setProperty('grid-column', isMobile ? 'span 1' : 'span 2', 'important')
+  const landscapePerRow = isMobile ? 1 : 2
+  const portraitPerRow = isMobile ? 2 : 3
+  const landscapeRows = Math.ceil(landscapes.length / landscapePerRow)
+  const portraitRows = Math.ceil(portraits.length / portraitPerRow)
+  const cycles = Math.max(landscapeRows, portraitRows)
+
+  let landscapeIndex = 0
+  let portraitIndex = 0
+  let row = 1
+  let order = 1
+
+  for (let cycle = 0; cycle < cycles; cycle += 1) {
+    // Landscape row. Missing matching products intentionally leave blank slots.
+    for (let slot = 0; slot < landscapePerRow; slot += 1) {
+      const card = landscapes[landscapeIndex++]
+      if (!card) continue
+
+      card.style.setProperty('grid-row', String(row), 'important')
+      if (isMobile) {
+        card.style.setProperty('grid-column', '1 / -1', 'important')
+      } else {
+        const start = slot === 0 ? 1 : 4
+        card.style.setProperty('grid-column', `${start} / span 3`, 'important')
+      }
+      card.style.setProperty('order', String(order++), 'important')
     }
+    row += 1
+
+    // Portrait row. Missing matching products intentionally leave blank slots.
+    for (let slot = 0; slot < portraitPerRow; slot += 1) {
+      const card = portraits[portraitIndex++]
+      if (!card) continue
+
+      card.style.setProperty('grid-row', String(row), 'important')
+      if (isMobile) {
+        const start = slot + 1
+        card.style.setProperty('grid-column', `${start} / span 1`, 'important')
+      } else {
+        const start = 1 + slot * 2
+        card.style.setProperty('grid-column', `${start} / span 2`, 'important')
+      }
+      card.style.setProperty('order', String(order++), 'important')
+    }
+    row += 1
+  }
+
+  // Square and still-undetected cards are kept after the reserved pattern.
+  ;[...squares, ...unknown].forEach(card => {
+    card.style.setProperty('grid-row', String(row), 'important')
+    card.style.setProperty('grid-column', isMobile ? 'span 1' : 'span 2', 'important')
+    card.style.setProperty('order', String(order++), 'important')
   })
 }
 
@@ -98,8 +126,6 @@ function prepareCard(card: HTMLElement) {
 
   image.addEventListener('load', () => finish(image.naturalWidth, image.naturalHeight), { once: true })
 
-  // Product cards use lazy-loaded images. Probe the source independently so
-  // every card gets an orientation even before it scrolls into the viewport.
   const probe = new Image()
   probe.onload = () => finish(probe.naturalWidth, probe.naturalHeight)
   probe.src = image.currentSrc || image.src
