@@ -5,6 +5,7 @@ import './product-card-orientation.css'
 import './info-pages.css'
 import './collection-rebuild.css'
 import './admin-users.css'
+import './mobile-landing-fixes.css'
 import ProductCardOrientation from './components/ProductCardOrientation'
 import FaviconSync from './components/FaviconSync'
 
