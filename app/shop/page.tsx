@@ -74,7 +74,7 @@ export default function ShopPage() {
     let active = true
     async function loadProducts() {
       if (!supabase) { if (active) { setError('Store connection is unavailable.'); setLoading(false) } return }
-      const { data, error: loadError } = await supabase.from('products').select('id,name,slug,price,short_description,description,orientation,created_at,category:categories(name),product_images(storage_path,is_primary,sort_order)').eq('is_active', true).order('created_at', { ascending: true })
+      const { data, error: loadError } = await supabase.from('products').select('id,name,slug,price,short_description,description,orientation,created_at,category:categories(name),product_images(storage_path,is_primary,sort_order)').eq('is_active', true).eq('special_only', false).order('created_at', { ascending: true })
       if (!active) return
       if (loadError) { setError('Could not load the collection. Please refresh and try again.'); setLoading(false); return }
       const mapped: Product[] = (data || []).filter((product: any) => product.orientation === 'landscape' || product.orientation === 'portrait').map((product: any) => ({ id: product.id, name: product.name, slug: product.slug, price: Number(product.price || 349), short_description: product.short_description, description: product.description, orientation: product.orientation, category: product.category?.name === 'Aviation' ? 'Aviation Art' : product.category?.name || null, images: (product.product_images || []).slice().sort((a: any, b: any) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary)) || (a.sort_order || 0) - (b.sort_order || 0)).map((image: any) => image.storage_path) }))
