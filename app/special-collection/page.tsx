@@ -11,6 +11,7 @@ type SpecialLocation = {
   slug: string
   short_description?: string | null
   location_label?: string | null
+  image_url?: string | null
   sort_order: number
 }
 
@@ -25,7 +26,7 @@ export default function SpecialCollectionPage() {
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return }
-    supabase.from('special_locations').select('id,name,slug,short_description,location_label,sort_order').eq('is_active', true).order('sort_order', { ascending: true }).then(({ data }) => {
+    supabase.from('special_locations').select('id,name,slug,short_description,location_label,image_url,sort_order').eq('is_active', true).order('sort_order', { ascending: true }).then(({ data }) => {
       setLocations((data || []) as SpecialLocation[])
       setLoading(false)
     })
@@ -37,7 +38,7 @@ export default function SpecialCollectionPage() {
       <section className="ssc-special-hero"><div><div className="ssc-special-eyebrow">SkyShotConner / Selected Locations</div><h1>SPECIAL<br/>COLLECTION.</h1></div><p>A curated series of SkyShotConner artworks available through selected museums, partners and physical locations. Choose a location to discover the pieces connected to it.</p></section>
       <section className="ssc-locations" aria-label="Special collection locations">
         {loading && <div className="ssc-special-empty">Loading locations…</div>}
-        {!loading && locations.map((location, index) => <a className="ssc-location-card" href={`/special-collection/${location.slug}`} key={location.id}><div className="ssc-location-index">{String(index + 1).padStart(2, '0')}</div><div><h2>{location.name}</h2><p>{location.short_description}</p></div><div className="ssc-location-meta"><ArrowUpRight size={18}/><span>{location.location_label}</span></div></a>)}
+        {!loading && locations.map((location, index) => <a className="ssc-location-card" href={`/special-collection/${location.slug}`} key={location.id}>{location.image_url?<div className="ssc-location-image"><img src={location.image_url} alt={location.name}/><span>{String(index + 1).padStart(2, '0')}</span></div>:<div className="ssc-location-index">{String(index + 1).padStart(2, '0')}</div>}<div><h2>{location.name}</h2><p>{location.short_description}</p></div><div className="ssc-location-meta"><ArrowUpRight size={18}/><span>{location.location_label}</span></div></a>)}
         {!loading && locations.length === 0 && <div className="ssc-special-empty">No special locations are published yet.</div>}
       </section>
     </main>
