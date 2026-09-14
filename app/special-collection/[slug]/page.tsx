@@ -21,19 +21,20 @@ export default function SpecialLocationPage({params}:{params:Promise<{slug:strin
 
   useEffect(()=>{
     if(!supabase||!slug)return
+    const client=supabase
     let active=true
     async function load(){
-      const {data:locationData}=await supabase.from('special_locations').select('id,name,slug,description,location_label').eq('slug',slug).eq('is_active',true).maybeSingle()
+      const {data:locationData}=await client.from('special_locations').select('id,name,slug,description,location_label').eq('slug',slug).eq('is_active',true).maybeSingle()
       if(!active){return}
       if(!locationData){setLoading(false);return}
       setLocation(locationData as Location)
 
-      const {data:links}=await supabase.from('special_collection_products').select('product_id,sort_order,is_exclusive,note').eq('location_id',locationData.id).order('sort_order',{ascending:true})
+      const {data:links}=await client.from('special_collection_products').select('product_id,sort_order,is_exclusive,note').eq('location_id',locationData.id).order('sort_order',{ascending:true})
       const orderedLinks=links||[]
       const ids=orderedLinks.map((link:any)=>link.product_id)
       if(ids.length===0){setProducts([]);setLoading(false);return}
 
-      const {data:productData}=await supabase.from('products').select('id,name,slug,short_description,orientation,product_images(storage_path,is_primary,sort_order)').in('id',ids).eq('is_active',true)
+      const {data:productData}=await client.from('products').select('id,name,slug,short_description,orientation,product_images(storage_path,is_primary,sort_order)').in('id',ids).eq('is_active',true)
       const byId=new Map((productData||[]).map((product:any)=>[product.id,product]))
       const mapped:Product[]=orderedLinks.map((link:any)=>{
         const product:any=byId.get(link.product_id)
