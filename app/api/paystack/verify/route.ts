@@ -44,12 +44,14 @@ export async function GET(request: Request) {
     }
     if (!order) return NextResponse.json({ status: 'pending' })
 
-    const referenceMatches = String(transaction.reference || '') === reference
+    // Never trust the browser redirect alone. Confirm Paystack's verified
+    // transaction matches the exact order, amount, currency and reference.
+    const referenceMatches = String(transaction.reference || '') === reference && order.paystack_reference === reference
     const expectedAmount = Math.round(Number(order.total) * 100)
-    const amountMatches = Number.isFinite(expectedAmount) && Number(transaction.amount) === expectedAmount
+    const amountMatches = Number.isFinite(expectedAmount) && expectedAmount > 0 && Number(transaction.amount) === expectedAmount
     const currencyMatches = String(transaction.currency || '').toUpperCase() === 'ZAR'
     const metadataOrderId = transaction.metadata?.order_id
-    const metadataMatches = metadataOrderId == null || String(metadataOrderId) === String(order.id)
+    const metadataMatches = metadataOrderId != null && String(metadataOrderId) === String(order.id)
 
     if (transaction.status === 'success' && referenceMatches && amountMatches && currencyMatches && metadataMatches) {
       if (order.payment_status === 'paid') {
@@ -69,6 +71,17 @@ export async function GET(request: Request) {
         return NextResponse.json({ status: 'pending' }, { status: 500 })
       }
       return NextResponse.json({ status: 'paid', order_id: order.id })
+    }
+
+    if (transaction.status === 'success') {
+      console.error('Paystack verification mismatch', {
+        orderId: order.id,
+        referenceMatches,
+        amountMatches,
+        currencyMatches,
+        metadataMatches,
+      })
+      return NextResponse.json({ status: 'verification_failed', order_id: order.id }, { status: 400 })
     }
 
     return NextResponse.json({ status: transaction.status || 'pending', order_id: order.id })
