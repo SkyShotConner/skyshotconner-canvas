@@ -4,12 +4,12 @@ import { useEffect } from 'react'
 
 type Orientation = 'landscape' | 'portrait' | 'square'
 
-function applyOrientation(card: HTMLElement) {
+function setOrientation(card: HTMLElement, width: number, height: number) {
   const image = card.querySelector<HTMLImageElement>('.product-image-wrap img')
   const wrap = card.querySelector<HTMLElement>('.product-image-wrap')
-  if (!image || !wrap || !image.naturalWidth || !image.naturalHeight) return false
+  if (!image || !wrap || !width || !height) return false
 
-  const ratio = image.naturalWidth / image.naturalHeight
+  const ratio = width / height
   const orientation: Orientation = ratio > 1.05 ? 'landscape' : ratio < 0.95 ? 'portrait' : 'square'
 
   card.dataset.orientation = orientation
@@ -32,10 +32,17 @@ function applyOrientation(card: HTMLElement) {
   return true
 }
 
+function applyOrientation(card: HTMLElement) {
+  const image = card.querySelector<HTMLImageElement>('.product-image-wrap img')
+  if (!image || !image.naturalWidth || !image.naturalHeight) return false
+  return setOrientation(card, image.naturalWidth, image.naturalHeight)
+}
+
 function buildPattern(cards: HTMLElement[], landscapeCount: number, portraitCount: number) {
   const landscapes = cards.filter(card => card.dataset.orientation === 'landscape')
   const portraits = cards.filter(card => card.dataset.orientation === 'portrait')
   const squares = cards.filter(card => card.dataset.orientation === 'square')
+  const unknown = cards.filter(card => !card.dataset.orientation)
   const arranged: HTMLElement[] = []
 
   let landscapeIndex = 0
@@ -51,7 +58,7 @@ function buildPattern(cards: HTMLElement[], landscapeCount: number, portraitCoun
     }
   }
 
-  arranged.push(...squares)
+  arranged.push(...squares, ...unknown)
   return arranged
 }
 
@@ -63,7 +70,14 @@ function arrangeGrid(grid: HTMLElement) {
   const arranged = buildPattern(cards, isMobile ? 1 : 2, isMobile ? 2 : 3)
 
   arranged.forEach((card, index) => {
-    card.style.setProperty('order', String(index + 1))
+    card.style.setProperty('order', String(index + 1), 'important')
+
+    const orientation = card.dataset.orientation
+    if (orientation === 'landscape') {
+      card.style.setProperty('grid-column', isMobile ? 'span 2' : 'span 3', 'important')
+    } else if (orientation === 'portrait' || orientation === 'square') {
+      card.style.setProperty('grid-column', isMobile ? 'span 1' : 'span 2', 'important')
+    }
   })
 }
 
@@ -71,14 +85,24 @@ function prepareCard(card: HTMLElement) {
   const image = card.querySelector<HTMLImageElement>('.product-image-wrap img')
   if (!image) return
 
-  if (!applyOrientation(card)) {
-    const onLoad = () => {
-      applyOrientation(card)
-      const grid = card.closest<HTMLElement>('.shop-grid')
-      if (grid) arrangeGrid(grid)
-    }
-    image.addEventListener('load', onLoad, { once: true })
+  if (applyOrientation(card)) return
+
+  if (card.dataset.orientationProbe === image.currentSrc + image.src) return
+  card.dataset.orientationProbe = image.currentSrc + image.src
+
+  const finish = (width: number, height: number) => {
+    if (!setOrientation(card, width, height)) return
+    const grid = card.closest<HTMLElement>('.shop-grid')
+    if (grid) arrangeGrid(grid)
   }
+
+  image.addEventListener('load', () => finish(image.naturalWidth, image.naturalHeight), { once: true })
+
+  // Product cards use lazy-loaded images. Probe the source independently so
+  // every card gets an orientation even before it scrolls into the viewport.
+  const probe = new Image()
+  probe.onload = () => finish(probe.naturalWidth, probe.naturalHeight)
+  probe.src = image.currentSrc || image.src
 }
 
 function scan() {
@@ -97,7 +121,7 @@ export default function ProductCardOrientation() {
     const onViewportChange = () => requestAnimationFrame(scan)
     mediaQuery.addEventListener('change', onViewportChange)
 
-    const timers = [100, 300, 700, 1500].map(ms => window.setTimeout(scan, ms))
+    const timers = [100, 300, 700, 1500, 3000].map(ms => window.setTimeout(scan, ms))
 
     return () => {
       observer.disconnect()
