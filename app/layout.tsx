@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import './storefront-overrides.css'
+import './product-card-orientation.css'
 import './info-pages.css'
 import './collection-rebuild.css'
 import './admin-users.css'
+import ProductCardOrientation from './components/ProductCardOrientation'
 
 export const metadata: Metadata = {
   title: 'SkyShotConner — The Art of Flight',
@@ -12,5 +14,5 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>
+  return <html lang="en"><body><ProductCardOrientation/>{children}</body></html>
 }
