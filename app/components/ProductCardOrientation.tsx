@@ -1,18 +1,17 @@
 'use client'
 
 import { useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 type Orientation = 'landscape' | 'portrait' | 'square'
 
-function setOrientation(card: HTMLElement, width: number, height: number) {
+function styleCard(card: HTMLElement, orientation: Orientation, source: 'database' | 'image' = 'image') {
   const image = card.querySelector<HTMLImageElement>('.product-image-wrap img')
   const wrap = card.querySelector<HTMLElement>('.product-image-wrap')
-  if (!image || !wrap || !width || !height) return false
-
-  const ratio = width / height
-  const orientation: Orientation = ratio > 1.05 ? 'landscape' : ratio < 0.95 ? 'portrait' : 'square'
+  if (!image || !wrap) return false
 
   card.dataset.orientation = orientation
+  card.dataset.orientationSource = source
   wrap.classList.remove('portrait', 'landscape', 'square')
   wrap.classList.add(orientation)
 
@@ -32,10 +31,19 @@ function setOrientation(card: HTMLElement, width: number, height: number) {
   return true
 }
 
-function applyOrientation(card: HTMLElement) {
+function setOrientationFromDimensions(card: HTMLElement, width: number, height: number) {
+  if (!width || !height || card.dataset.orientationSource === 'database') return false
+
+  const ratio = width / height
+  const orientation: Orientation = ratio > 1.05 ? 'landscape' : ratio < 0.95 ? 'portrait' : 'square'
+  return styleCard(card, orientation, 'image')
+}
+
+function applyImageOrientation(card: HTMLElement) {
+  if (card.dataset.orientationSource === 'database') return true
   const image = card.querySelector<HTMLImageElement>('.product-image-wrap img')
   if (!image || !image.naturalWidth || !image.naturalHeight) return false
-  return setOrientation(card, image.naturalWidth, image.naturalHeight)
+  return setOrientationFromDimensions(card, image.naturalWidth, image.naturalHeight)
 }
 
 function arrangeGrid(grid: HTMLElement) {
@@ -48,7 +56,6 @@ function arrangeGrid(grid: HTMLElement) {
   const squares = cards.filter(card => card.dataset.orientation === 'square')
   const unknown = cards.filter(card => !card.dataset.orientation)
 
-  // Reset explicit placement before rebuilding the pattern.
   cards.forEach(card => {
     card.style.removeProperty('grid-row')
     card.style.removeProperty('grid-column')
@@ -67,11 +74,12 @@ function arrangeGrid(grid: HTMLElement) {
   let order = 1
 
   for (let cycle = 0; cycle < cycles; cycle += 1) {
-    // Landscape row. Missing matching products intentionally leave blank slots.
+    let placedLandscape = false
     for (let slot = 0; slot < landscapePerRow; slot += 1) {
       const card = landscapes[landscapeIndex++]
       if (!card) continue
 
+      placedLandscape = true
       card.style.setProperty('grid-row', String(row), 'important')
       if (isMobile) {
         card.style.setProperty('grid-column', '1 / -1', 'important')
@@ -81,13 +89,14 @@ function arrangeGrid(grid: HTMLElement) {
       }
       card.style.setProperty('order', String(order++), 'important')
     }
-    row += 1
+    if (placedLandscape) row += 1
 
-    // Portrait row. Missing matching products intentionally leave blank slots.
+    let placedPortrait = false
     for (let slot = 0; slot < portraitPerRow; slot += 1) {
       const card = portraits[portraitIndex++]
       if (!card) continue
 
+      placedPortrait = true
       card.style.setProperty('grid-row', String(row), 'important')
       if (isMobile) {
         const start = slot + 1
@@ -98,28 +107,41 @@ function arrangeGrid(grid: HTMLElement) {
       }
       card.style.setProperty('order', String(order++), 'important')
     }
-    row += 1
+    if (placedPortrait) row += 1
   }
 
-  // Square and still-undetected cards are kept after the reserved pattern.
+  let overflowColumn = 0
   ;[...squares, ...unknown].forEach(card => {
+    const columnsPerRow = isMobile ? 2 : 3
+    if (overflowColumn >= columnsPerRow) {
+      overflowColumn = 0
+      row += 1
+    }
+
     card.style.setProperty('grid-row', String(row), 'important')
-    card.style.setProperty('grid-column', isMobile ? 'span 1' : 'span 2', 'important')
+    if (isMobile) {
+      card.style.setProperty('grid-column', `${overflowColumn + 1} / span 1`, 'important')
+    } else {
+      card.style.setProperty('grid-column', `${1 + overflowColumn * 2} / span 2`, 'important')
+    }
     card.style.setProperty('order', String(order++), 'important')
+    overflowColumn += 1
   })
 }
 
 function prepareCard(card: HTMLElement) {
+  if (card.dataset.orientationSource === 'database') return
+
   const image = card.querySelector<HTMLImageElement>('.product-image-wrap img')
   if (!image) return
 
-  if (applyOrientation(card)) return
+  if (applyImageOrientation(card)) return
 
   if (card.dataset.orientationProbe === image.currentSrc + image.src) return
   card.dataset.orientationProbe = image.currentSrc + image.src
 
   const finish = (width: number, height: number) => {
-    if (!setOrientation(card, width, height)) return
+    if (!setOrientationFromDimensions(card, width, height)) return
     const grid = card.closest<HTMLElement>('.shop-grid')
     if (grid) arrangeGrid(grid)
   }
@@ -136,18 +158,55 @@ function scan() {
   document.querySelectorAll<HTMLElement>('.shop-grid').forEach(arrangeGrid)
 }
 
+async function applyDatabaseOrientations() {
+  const supabase = createClient()
+  if (!supabase) return
+
+  const { data } = await supabase
+    .from('products')
+    .select('name,orientation')
+    .eq('is_active', true)
+
+  if (!data?.length) return
+
+  const orientations = new Map<string, Orientation>()
+  data.forEach((product: any) => {
+    if (product.orientation !== 'landscape' && product.orientation !== 'portrait') return
+    orientations.set(String(product.name || '').trim().toLowerCase(), product.orientation)
+  })
+
+  document.querySelectorAll<HTMLElement>('.product-card').forEach(card => {
+    const name = card.querySelector<HTMLElement>('.product-name')?.textContent?.trim().toLowerCase()
+    if (!name) return
+
+    const orientation = orientations.get(name)
+    if (orientation) styleCard(card, orientation, 'database')
+  })
+
+  document.querySelectorAll<HTMLElement>('.shop-grid').forEach(arrangeGrid)
+}
+
 export default function ProductCardOrientation() {
   useEffect(() => {
     scan()
+    applyDatabaseOrientations()
 
-    const observer = new MutationObserver(() => requestAnimationFrame(scan))
+    const observer = new MutationObserver(() => {
+      requestAnimationFrame(() => {
+        scan()
+        applyDatabaseOrientations()
+      })
+    })
     observer.observe(document.body, { childList: true, subtree: true })
 
     const mediaQuery = window.matchMedia('(max-width: 800px)')
     const onViewportChange = () => requestAnimationFrame(scan)
     mediaQuery.addEventListener('change', onViewportChange)
 
-    const timers = [100, 300, 700, 1500, 3000].map(ms => window.setTimeout(scan, ms))
+    const timers = [100, 300, 700, 1500, 3000].map(ms => window.setTimeout(() => {
+      scan()
+      applyDatabaseOrientations()
+    }, ms))
 
     return () => {
       observer.disconnect()
