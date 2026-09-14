@@ -1,0 +1,14 @@
+@media(max-width:800px){
+  .hero-copy{max-width:100%;overflow:visible}
+  .hero-copy .display{font-size:clamp(40px,12.8vw,64px)!important;line-height:.92!important;letter-spacing:-.04em!important;max-width:calc(100vw - 44px)!important;white-space:normal!important;overflow:visible!important}
+  .scene{height:auto!important;min-height:0!important;aspect-ratio:16/9!important;margin:0!important;padding:0!important;background:#0a0a09!important;overflow:hidden!important}
+  .scene>img{display:block!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;object-fit:contain!important;object-position:center center!important;margin:0!important;padding:0!important}
+  .scene .scene-copy{position:absolute!important;inset:0!important;z-index:2!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;width:100%!important;max-width:100%!important;padding:16px!important;text-align:center!important;pointer-events:none!important}
+  .scene .scene-copy .wide{white-space:nowrap!important;font-size:clamp(20px,7vw,32px)!important;letter-spacing:.12em!important;line-height:1!important;width:auto!important;max-width:calc(100vw - 32px)!important;padding:0!important}
+  .scene .scene-copy .eyebrow{margin-bottom:12px!important;font-size:8px!important;letter-spacing:.16em!important}
+}
+
+@media(max-width:390px){
+  .hero-copy .display{font-size:clamp(37px,12.3vw,50px)!important}
+  .scene .scene-copy .wide{font-size:clamp(18px,6.5vw,26px)!important;letter-spacing:.1em!important}
+}
