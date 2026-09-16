@@ -35,15 +35,27 @@ s=s.replace(/<img(?![^>]*loading=)([^>]*?)\/>/g, (match, attrs) => {
 })
 
 // Keep the loading screen up until the browser is ready, critical images finish,
-// and a minimum of three seconds have elapsed. This gives the brand reveal a
-// deliberate feel while still waiting for the real page content.
+// and a minimum of three seconds have elapsed. If Scout has been configured in
+// site_images, use him as the loading mark; otherwise preserve the text fallback.
 if(!/function SiteLoader\(/.test(s)){
   const anchor='function Nav('
-  const loader="function SiteLoader({ready=true}:{ready?:boolean}){const [windowReady,setWindowReady]=useState(typeof document!=='undefined'&&document.readyState==='complete');const [imagesReady,setImagesReady]=useState(false);const [minTimeReady,setMinTimeReady]=useState(false);useEffect(()=>{const timer=window.setTimeout(()=>setMinTimeReady(true),3000);return()=>window.clearTimeout(timer)},[]);useEffect(()=>{if(document.readyState==='complete')setWindowReady(true);else{const done=()=>setWindowReady(true);window.addEventListener('load',done,{once:true});return()=>window.removeEventListener('load',done)}},[]);useEffect(()=>{if(!ready||!windowReady)return;let timer:number;const check=()=>{const images=Array.from(document.querySelectorAll<HTMLImageElement>('[data-critical-image]'));if(images.length&&images.every(img=>img.complete)){setImagesReady(true);return}timer=window.setTimeout(check,50)};check();return()=>window.clearTimeout(timer)},[ready,windowReady]);const show=!(windowReady&&ready&&imagesReady&&minTimeReady);return show?<div className=\"site-loader\" role=\"status\" aria-label=\"Loading SkyShotConner\"><div className=\"site-loader-mark\">SKYSHOTCONNER</div><div className=\"site-loader-line\"><span/></div></div>:null}\n"
+  const loader="function SiteLoader({ready=true,image=''}:{ready?:boolean;image?:string}){const [windowReady,setWindowReady]=useState(typeof document!=='undefined'&&document.readyState==='complete');const [imagesReady,setImagesReady]=useState(false);const [minTimeReady,setMinTimeReady]=useState(false);useEffect(()=>{const timer=window.setTimeout(()=>setMinTimeReady(true),3000);return()=>window.clearTimeout(timer)},[]);useEffect(()=>{if(document.readyState==='complete')setWindowReady(true);else{const done=()=>setWindowReady(true);window.addEventListener('load',done,{once:true});return()=>window.removeEventListener('load',done)}},[]);useEffect(()=>{if(!ready||!windowReady)return;let timer:number;const check=()=>{const images=Array.from(document.querySelectorAll<HTMLImageElement>('[data-critical-image]'));if(images.length&&images.every(img=>img.complete)){setImagesReady(true);return}timer=window.setTimeout(check,50)};check();return()=>window.clearTimeout(timer)},[ready,windowReady]);const show=!(windowReady&&ready&&imagesReady&&minTimeReady);return show?<div className=\"site-loader\" role=\"status\" aria-label=\"Loading SkyShotConner\">{image?<img className=\"site-loader-mascot\" src={image} alt=\"Scout, the SkyShotConner mascot\"/>:<div className=\"site-loader-mark\">SKYSHOTCONNER</div>}<div className=\"site-loader-line\"><span/></div></div>:null}\n"
   if(!s.includes(anchor)) throw new Error('Unable to locate navigation component')
   s=s.replace(anchor,loader+anchor)
-  s=s.replace("return <div><Nav", "return <div><SiteLoader ready={path==='/'?siteImagesReady:true}/><Nav")
+  s=s.replace("return <div><Nav", "return <div><SiteLoader ready={path==='/'?siteImagesReady:true} image={siteImages.loading_mascot||siteImages.brand_logo||''}/><Nav")
 }
+
+// Use the configured Scout logo in the main navigation while retaining the
+// SkyShotConner wordmark as a graceful fallback until an image is uploaded.
+s=s.replace("<Nav cart={cart.reduce((n,i)=>n+i.quantity,0)}", "<Nav brandLogo={siteImages.brand_logo||''} cart={cart.reduce((n,i)=>n+i.quantity,0)}")
+s=s.replace(
+  "function Nav({cart,onMenu,onSearch,onNav,user}:{cart:number;onMenu:()=>void;onSearch:()=>void;onNav:(x:string)=>void;user:boolean})",
+  "function Nav({brandLogo='',cart,onMenu,onSearch,onNav,user}:{brandLogo?:string;cart:number;onMenu:()=>void;onSearch:()=>void;onNav:(x:string)=>void;user:boolean})"
+)
+s=s.replace(
+  '<button className="brand" onClick={()=>onNav(\'/\')}>SKYSHOTCONNER</button>',
+  '<button className="brand" aria-label="SkyShotConner home" onClick={()=>onNav(\'/\')}>{brandLogo?<img className="brand-logo-image" src={brandLogo} alt="Scout — SkyShotConner"/>:<span>SKYSHOTCONNER</span>}</button>'
+)
 
 // First-visit legal consent gate. Acceptance is remembered locally; declining leaves the site.
 if(!/function LegalConsent\(/.test(s)){
@@ -56,8 +68,8 @@ if(!/function LegalConsent\(/.test(s)){
 
 // Premium footer refresh: cleaner hierarchy on desktop and a compact stacked layout on mobile.
 const oldFooter=/function Footer\(\{nav\}:\{nav:\(x:string\)=>void\}\)\{[\s\S]*?\}\n$/m
-const newFooter=`function Footer({nav}:{nav:(x:string)=>void}){return <footer className="footer"><div className="container footer-top"><div className="footer-brand"><div className="brand">SKYSHOTCONNER</div><p>Aviation captured as art.<br/>Premium canvas pieces made for people who look up.</p><button className="footer-cta" onClick={()=>nav('/shop')}>Explore the collection <ArrowUpRight size={13}/></button></div><div className="footer-links"><div><h3>Explore</h3><button onClick={()=>nav('/shop')}>Collection</button><button onClick={()=>nav('/shop')}>Aircraft</button><button onClick={()=>nav('/about')}>About</button></div><div><h3>Support</h3><button onClick={()=>nav('/contact')}>Contact</button><button onClick={()=>nav('/faq')}>FAQ</button></div><div><h3>Follow</h3><a href="https://www.instagram.com/skyshotconner/" target="_blank" rel="noreferrer">Instagram</a></div></div></div><div className="container footer-bottom"><p>© {new Date().getFullYear()} SkyShotConner</p><div><button onClick={()=>nav('/privacy')}>Privacy</button><button onClick={()=>nav('/terms')}>Terms</button></div><span>The Art of Flight.</span></div></footer>}`
+const newFooter=`function Footer({nav}:{nav:(x:string)=>void}){return <footer className="footer"><div className="container footer-top"><div className="footer-brand"><div className="brand">SKYSHOTCONNER</div><p>Original aviation, wildlife and nature photography prepared as premium wall art.</p><button className="footer-cta" onClick={()=>nav('/shop')}>Explore the collection <ArrowUpRight size={13}/></button></div><div className="footer-links"><div><h3>Explore</h3><button onClick={()=>nav('/shop')}>Collection</button><button onClick={()=>nav('/about')}>About</button></div><div><h3>Support</h3><button onClick={()=>nav('/contact')}>Contact</button><button onClick={()=>nav('/faq')}>FAQ</button></div><div><h3>Follow</h3><a href="https://www.instagram.com/skyshotconner/" target="_blank" rel="noreferrer">Instagram</a></div></div></div><div className="container footer-bottom"><p>© {new Date().getFullYear()} SkyShotConner</p><div><button onClick={()=>nav('/privacy')}>Privacy</button><button onClick={()=>nav('/terms')}>Terms</button></div><span>Photography made tangible.</span></div></footer>}`
 if(oldFooter.test(s)) s=s.replace(oldFooter,newFooter)
 
 fs.writeFileSync(file,s)
-console.log('Performance optimizations, landing scenes, and legal consent applied')
+console.log('Performance optimizations, Scout branding, landing scenes, and legal consent applied')

@@ -23,9 +23,11 @@ if(addMatch && !addMatch[0].includes('setCartToast')){
 }
 
 // Render the toast globally so it appears regardless of which page the customer is on.
+// Match the Nav component even when other props (such as the Scout brand logo) are added before cart.
 if(!s.includes('<CartToast toast={cartToast}')){
-  const navRender=/<Nav cart=\{cart\.reduce\(\(n,i\)=>n\+i\.quantity,0\)\}/
-  if(navRender.test(s)) s=s.replace(navRender,'<CartToast toast={cartToast} onClose={()=>setCartToast(null)} /><Nav cart={cart.reduce((n,i)=>n+i.quantity,0)}')
+  const navRender=/<Nav(?=[\s>])[^>]*?cart=\{cart\.reduce\(\(n,i\)=>n\+i\.quantity,0\)\}/
+  const navMatch=s.match(navRender)
+  if(navMatch) s=s.replace(navMatch[0],'<CartToast toast={cartToast} onClose={()=>setCartToast(null)} />'+navMatch[0])
   else throw new Error('Unable to locate navigation render for cart toast')
 }
 

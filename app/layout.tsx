@@ -11,9 +11,12 @@ import ProductCardOrientation from './components/ProductCardOrientation'
 import FaviconSync from './components/FaviconSync'
 
 export const metadata: Metadata = {
-  title: 'SkyShotConner — The Art of Flight',
-  description: 'Premium aviation canvas artwork by SkyShotConner.',
-  openGraph: { title: 'SkyShotConner — The Art of Flight', description: 'A cinematic collection of aviation art.' }
+  title: 'SkyShotConner — Aviation, Wildlife & Nature Photography',
+  description: 'SkyShotConner photography and wall art featuring aviation, wildlife and nature.',
+  openGraph: {
+    title: 'SkyShotConner — Aviation, Wildlife & Nature Photography',
+    description: 'Photography and wall art by SkyShotConner, spanning aviation, wildlife and nature.'
+  }
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
