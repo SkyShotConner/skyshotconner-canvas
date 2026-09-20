@@ -32,6 +32,9 @@ type Order={
   order_confirmation_status:string
   order_confirmation_sent_at:string|null
   order_confirmation_error:string|null
+  new_order_notification_status:string
+  new_order_notification_sent_at:string|null
+  new_order_notification_error:string|null
   order_items:OrderItem[]
 }
 
@@ -64,7 +67,7 @@ export default function OrdersAdminPage(){
     if(!supabase)return
     const {data,error}=await supabase
       .from('orders')
-      .select('id,created_at,updated_at,paid_at,customer_name,customer_email,customer_phone,shipping_address,subtotal,shipping,total,status,payment_status,payment_provider,paystack_reference,order_confirmation_status,order_confirmation_sent_at,order_confirmation_error,order_items(id,product_name,sku,canvas_size,quantity,unit_price,line_total)')
+      .select('id,created_at,updated_at,paid_at,customer_name,customer_email,customer_phone,shipping_address,subtotal,shipping,total,status,payment_status,payment_provider,paystack_reference,order_confirmation_status,order_confirmation_sent_at,order_confirmation_error,new_order_notification_status,new_order_notification_sent_at,new_order_notification_error,order_items(id,product_name,sku,canvas_size,quantity,unit_price,line_total)')
       .order('created_at',{ascending:false})
     if(error){setMessage(error.message);return}
     const next=(data||[]).map((o:any)=>({...o,order_items:o.order_items||[]})) as Order[]
@@ -176,7 +179,8 @@ function OrderDetail({order,busy,updateStatus,resend}:{order:Order;busy:string|n
       <div><span>Customer</span><strong>{order.customer_name}</strong><small>{order.customer_email}</small>{order.customer_phone&&<small>{order.customer_phone}</small>}</div>
       <div><span>Payment</span><strong>{order.payment_status}</strong><small>{order.payment_provider||'—'}</small><small>{order.paid_at?'Paid '+date(order.paid_at):'Not paid yet'}</small></div>
       <div><span>Total</span><strong>{money(order.total)}</strong><small>Subtotal {money(order.subtotal)}</small><small>Shipping {money(order.shipping)}</small></div>
-      <div><span>Confirmation email</span><strong>{order.order_confirmation_status||'pending'}</strong><small>{order.order_confirmation_sent_at?'Sent '+date(order.order_confirmation_sent_at):'Not sent yet'}</small></div>
+      <div><span>Customer email</span><strong>{order.order_confirmation_status||'pending'}</strong><small>{order.order_confirmation_sent_at?'Sent '+date(order.order_confirmation_sent_at):'Not sent yet'}</small></div>
+      <div><span>Store alert</span><strong>{order.new_order_notification_status||'pending'}</strong><small>{order.new_order_notification_sent_at?'Sent '+date(order.new_order_notification_sent_at):order.new_order_notification_status==='skipped'?'Existing order — not sent':'Not sent yet'}</small></div>
     </div>
 
     <div className="order-section">
@@ -200,6 +204,13 @@ function OrderDetail({order,busy,updateStatus,resend}:{order:Order;busy:string|n
     <div className="order-section">
       <span className="eyebrow">Fulfilment status</span>
       <div className="order-status-actions">{ORDER_STATUSES.map(status=><button key={status} disabled={busy===order.id||order.status===status} className={order.status===status?'active':''} onClick={()=>updateStatus(order,status)}>{status}</button>)}</div>
+    </div>
+
+    <div className="order-section">
+      <span className="eyebrow">Store notification</span>
+      <div className="email-status-box">
+        <div><strong>{order.new_order_notification_status||'pending'}</strong><p>{order.new_order_notification_error||'A new paid-order notification is sent to conneraviation18@gmail.com when payment is verified.'}</p></div>
+      </div>
     </div>
 
     <div className="order-section">
