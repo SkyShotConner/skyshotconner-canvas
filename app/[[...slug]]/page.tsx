@@ -21,7 +21,7 @@ const demoProducts:Product[]=[
  {id:'demo-cockpit',name:'FLIGHT DECK — ABOVE THE CLOUDS',slug:'flight-deck-above-the-clouds',price:349,category:'Cockpit',short_description:'The view from where aviation begins.',images:[editorial.cockpit]}
 ]
 function imgFor(p:Product){return p.images?.[0]?.startsWith('http')?p.images[0]:storageUrl(p.images?.[0]||'')||FALLBACK}
-function money(n:number){return new Intl.NumberFormat('en-ZA',{style:'currency',currency:'ZAR',maximumFractionDigits:0}).format(n)}
+function money(n:number){return new Intl.NumberFormat('en-ZA',{style:'currency',currency:'ZAR',minimumFractionDigits:2,maximumFractionDigits:2}).format(n)}
 function canvasPrice(size:string,frame:string){return (CANVAS_PRICES[size]||99.99)+(FRAME_PRICES[frame]||0)}
 
 export default function Site(){
