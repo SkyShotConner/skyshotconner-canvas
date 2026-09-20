@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import crypto from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
+import { sendOrderConfirmation } from '@/lib/orders/order-confirmation-email'
 
 export const runtime = 'nodejs'
 
@@ -40,7 +41,10 @@ export async function POST(request: Request) {
       .single()
 
     if (error || !order) return new NextResponse('Order not found', { status: 404 })
-    if (order.payment_status === 'paid') return new NextResponse('OK', { status: 200 })
+    if (order.payment_status === 'paid') {
+      await sendOrderConfirmation(order.id).catch(error => console.error('Order confirmation email retry failed', error))
+      return new NextResponse('OK', { status: 200 })
+    }
 
     const receivedAmount = Number(data.amount || 0) / 100
     if (Math.abs(receivedAmount - Number(order.total)) > 0.01) {
@@ -60,13 +64,20 @@ export async function POST(request: Request) {
       return new NextResponse('Payment verification failed', { status: 400 })
     }
 
-    await supabase.from('orders').update({
+    const { error: updateError } = await supabase.from('orders').update({
       payment_provider: 'paystack',
       payment_status: 'paid',
       status: 'paid',
       paystack_payment_id: verification.data.id || data.id || null,
       paid_at: new Date().toISOString(),
     }).eq('id', order.id)
+
+    if (updateError) {
+      console.error('Could not mark webhook order as paid', updateError)
+      return new NextResponse('Could not update order', { status: 500 })
+    }
+
+    await sendOrderConfirmation(order.id).catch(error => console.error('Order confirmation email failed after webhook', error))
 
     return new NextResponse('OK', { status: 200 })
   } catch (error) {
