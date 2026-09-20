@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { sendOrderConfirmation } from '@/lib/orders/order-confirmation-email'
 
 export const runtime = 'nodejs'
 
@@ -55,7 +56,11 @@ export async function GET(request: Request) {
 
     if (transaction.status === 'success' && referenceMatches && amountMatches && currencyMatches && metadataMatches) {
       if (order.payment_status === 'paid') {
-        return NextResponse.json({ status: 'paid', order_id: order.id })
+        const emailResult = await sendOrderConfirmation(order.id).catch(error => {
+          console.error('Order confirmation email retry failed', error)
+          return { sent: false, error: String(error) }
+        })
+        return NextResponse.json({ status: 'paid', order_id: order.id, confirmation_email: emailResult.sent ? 'sent' : 'pending' })
       }
 
       const { error: updateError } = await supabase.from('orders').update({
@@ -70,7 +75,11 @@ export async function GET(request: Request) {
         console.error('Could not mark verified Paystack order as paid', updateError)
         return NextResponse.json({ status: 'pending' }, { status: 500 })
       }
-      return NextResponse.json({ status: 'paid', order_id: order.id })
+      const emailResult = await sendOrderConfirmation(order.id).catch(error => {
+        console.error('Order confirmation email failed after verification', error)
+        return { sent: false, error: String(error) }
+      })
+      return NextResponse.json({ status: 'paid', order_id: order.id, confirmation_email: emailResult.sent ? 'sent' : 'pending' })
     }
 
     if (transaction.status === 'success') {
