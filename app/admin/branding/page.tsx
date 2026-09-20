@@ -8,7 +8,7 @@ type AssetState={image_url:string;storage_path:string}
 
 const assets:{key:AssetKey;label:string;eyebrow:string;description:string;recommendation:string}[]=[
   {key:'favicon',label:'Favicon',eyebrow:'Browser icon',description:'Shown in browser tabs and bookmarks.',recommendation:'Use a square PNG, WebP or ICO. 512 × 512 is ideal.'},
-  {key:'brand_logo',label:'Scout logo',eyebrow:'Header branding',description:'Replaces the text wordmark in the main website navigation when uploaded.',recommendation:'Use a transparent PNG or WebP with Scout centred and a little breathing room.'},
+  {key:'brand_logo',label:'Scout fallback logo',eyebrow:'Loading backup',description:'Used only as a backup loading image when no dedicated Scout loading-screen image is set. The website header always uses the SkyShotConner text wordmark.',recommendation:'Use a transparent PNG or WebP with Scout centred and a little breathing room.'},
   {key:'loading_mascot',label:'Scout loading screen',eyebrow:'Loading experience',description:'Shown on the branded loading screen while the storefront prepares the page.',recommendation:'A transparent PNG or WebP works best. You can use the same Scout artwork as the logo or a separate pose.'}
 ]
 
@@ -64,7 +64,7 @@ export default function BrandingAdminPage(){
   if(!allowed)return <main className="admin-shell"><div className="admin-card"><h1>Access denied.</h1><a className="admin-button" href="/admin">Back to admin</a></div></main>
 
   return <main className="admin-shell">
-    <header className="admin-header"><div><span className="eyebrow">SkyShotConner / Control</span><h1>Site branding</h1><p>Manage the browser icon, Scout logo and Scout loading screen from one place.</p></div><a className="admin-link" href="/">View store ↗</a></header>
+    <header className="admin-header"><div><span className="eyebrow">SkyShotConner / Control</span><h1>Site branding</h1><p>Manage the browser icon and Scout loading-screen artwork. The main website header uses the SkyShotConner text wordmark.</p></div><a className="admin-link" href="/">View store ↗</a></header>
     <div style={{display:'grid',gap:18}}>
       {assets.map(asset=>{
         const item=current[asset.key]
