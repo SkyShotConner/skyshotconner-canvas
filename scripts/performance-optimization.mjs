@@ -45,17 +45,8 @@ if(!/function SiteLoader\(/.test(s)){
   s=s.replace("return <div><Nav", "return <div><SiteLoader ready={path==='/'?siteImagesReady:true} image={siteImages.loading_mascot||siteImages.brand_logo||''}/><Nav")
 }
 
-// Use the configured Scout logo in the main navigation while retaining the
-// SkyShotConner wordmark as a graceful fallback until an image is uploaded.
-s=s.replace("<Nav cart={cart.reduce((n,i)=>n+i.quantity,0)}", "<Nav brandLogo={siteImages.brand_logo||''} cart={cart.reduce((n,i)=>n+i.quantity,0)}")
-s=s.replace(
-  "function Nav({cart,onMenu,onSearch,onNav,user}:{cart:number;onMenu:()=>void;onSearch:()=>void;onNav:(x:string)=>void;user:boolean})",
-  "function Nav({brandLogo='',cart,onMenu,onSearch,onNav,user}:{brandLogo?:string;cart:number;onMenu:()=>void;onSearch:()=>void;onNav:(x:string)=>void;user:boolean})"
-)
-s=s.replace(
-  '<button className="brand" onClick={()=>onNav(\'/\')}>SKYSHOTCONNER</button>',
-  '<button className="brand" aria-label="SkyShotConner home" onClick={()=>onNav(\'/\')}>{brandLogo?<img className="brand-logo-image" src={brandLogo} alt="Scout — SkyShotConner"/>:<span>SKYSHOTCONNER</span>}</button>'
-)
+// Keep the original SkyShotConner text wordmark in the main navigation.
+// Scout remains available for the loading screen only.
 
 // First-visit legal consent gate. Acceptance is remembered locally; declining leaves the site.
 if(!/function LegalConsent\(/.test(s)){
