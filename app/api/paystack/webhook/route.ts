@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import crypto from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
-import { sendOrderConfirmation } from '@/lib/orders/order-confirmation-email'
+import { sendOrderEmails } from '@/lib/orders/order-confirmation-email'
 
 export const runtime = 'nodejs'
 
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
     if (error || !order) return new NextResponse('Order not found', { status: 404 })
     if (order.payment_status === 'paid') {
-      await sendOrderConfirmation(order.id).catch(error => console.error('Order confirmation email retry failed', error))
+      await sendOrderEmails(order.id).catch(error => console.error('Order email retry failed', error))
       return new NextResponse('OK', { status: 200 })
     }
 
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       return new NextResponse('Could not update order', { status: 500 })
     }
 
-    await sendOrderConfirmation(order.id).catch(error => console.error('Order confirmation email failed after webhook', error))
+    await sendOrderEmails(order.id).catch(error => console.error('Order emails failed after webhook', error))
 
     return new NextResponse('OK', { status: 200 })
   } catch (error) {
