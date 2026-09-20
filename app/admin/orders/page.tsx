@@ -60,6 +60,7 @@ export default function OrdersAdminPage(){
   const [selectedId,setSelectedId]=useState<string|null>(null)
   const [query,setQuery]=useState('')
   const [filter,setFilter]=useState('all')
+  const [showAll,setShowAll]=useState(false)
   const [busy,setBusy]=useState<string|null>(null)
   const [message,setMessage]=useState('')
 
@@ -92,6 +93,7 @@ export default function OrdersAdminPage(){
     const matchesFilter=filter==='all'||order.status===filter||order.payment_status===filter
     return matchesQuery&&matchesFilter
   })
+  const visibleOrders=showAll?filtered:filtered.slice(0,3)
   const selected=orders.find(o=>o.id===selectedId)||null
 
   async function updateStatus(order:Order,status:string){
@@ -127,8 +129,8 @@ export default function OrdersAdminPage(){
     </header>
 
     <div className="orders-toolbar">
-      <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search order, customer or email…" aria-label="Search orders"/>
-      <select value={filter} onChange={e=>setFilter(e.target.value)}>
+      <input value={query} onChange={e=>{setQuery(e.target.value);setShowAll(false)}} placeholder="Search order, customer or email…" aria-label="Search orders"/>
+      <select value={filter} onChange={e=>{setFilter(e.target.value);setShowAll(false)}}>
         <option value="all">All orders</option>
         <option value="paid">Paid</option>
         <option value="processing">Processing</option>
@@ -146,7 +148,7 @@ export default function OrdersAdminPage(){
     <section className="orders-layout">
       <div className="admin-card orders-list">
         <div className="admin-card-head"><div><span className="eyebrow">Orders</span><h2>Recent orders</h2></div></div>
-        {filtered.length?filtered.map(order=><button key={order.id} className={'order-row '+(selected?.id===order.id?'selected':'')} onClick={()=>setSelectedId(order.id)}>
+        {visibleOrders.length?visibleOrders.map(order=><button key={order.id} className={'order-row '+(selected?.id===order.id?'selected':'')} onClick={()=>setSelectedId(order.id)}>
           <div>
             <strong>{orderNumber(order.id)}</strong>
             <span>{order.customer_name}</span>
@@ -158,6 +160,7 @@ export default function OrdersAdminPage(){
             <small className={'payment-'+order.payment_status}>{order.payment_status}</small>
           </div>
         </button>):<div className="admin-empty compact"><p>No orders match your search.</p></div>}
+        {filtered.length>3&&<button className="orders-view-more" onClick={()=>setShowAll(v=>!v)}>{showAll?'View less':'View more'}</button>}
       </div>
 
       <div className="admin-card order-detail">
