@@ -42,7 +42,7 @@ if(!/function siteImage\(/.test(s)){
 
 s=s.replace("type Product={id:string;name:string;slug:string;price:number;short_description?:string|null;description?:string|null;category?:string|null;images:string[]}","type Product={id:string;name:string;slug:string;price:number;short_description?:string|null;description?:string|null;category?:string|null;images:string[];orientation?:'landscape'|'portrait';limited_edition?:boolean}")
 s=s.replace("supabase.from('products').select('id,name,slug,price,short_description,description,category_id,product_images(storage_path)').eq('is_active',true)","supabase.from('products').select('id,name,slug,price,short_description,description,category_id,orientation,limited_edition,category:categories(name),product_images(storage_path)').eq('is_active',true)")
-s=s.replace("images:(p.product_images||[]).map((x:any)=>x.storage_path),price:349","images:(p.product_images||[]).map((x:any)=>x.storage_path),orientation:p.orientation==='portrait'?'portrait':'landscape',limited_edition:!!p.limited_edition,price:Number(p.price)||349")
+s=s.replace("images:(p.product_images||[]).map((x:any)=>x.storage_path),price:349","images:(p.product_images||[]).map((x:any)=>x.storage_path),orientation:p.orientation==='portrait'?'portrait':'landscape',limited_edition:!!p.limited_edition,price:Number(p.price)||99.99")
 s=s.replace("category:p.category_id,orientation:p.orientation||'landscape'","category:p.category?.name||'Aviation Art',orientation:p.orientation||'landscape'")
 
 s=s.replace("function ProductCard({p,nav,small=false}:{p:Product;nav:(x:string)=>void;small?:boolean})","function ProductCard({p,nav,small=false,layout}:{p:Product;nav:(x:string)=>void;small?:boolean;layout?:'landscape'|'portrait'})")
