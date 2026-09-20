@@ -22,6 +22,7 @@ type OrderRecord = {
   shipping: number
   total: number
   shipping_address: Record<string, unknown> | null
+  paystack_reference: string | null
   order_items: OrderItem[]
 }
 
@@ -206,7 +207,7 @@ export async function sendOrderConfirmation(orderId: string, options: SendOption
 
   const { data: order, error: orderError } = await supabase
     .from('orders')
-    .select('id,customer_name,customer_email,customer_phone,created_at,paid_at,subtotal,shipping,total,shipping_address,order_items(product_name,quantity,unit_price,line_total,sku,canvas_size)')
+    .select('id,customer_name,customer_email,customer_phone,created_at,paid_at,subtotal,shipping,total,shipping_address,paystack_reference,order_items(product_name,quantity,unit_price,line_total,sku,canvas_size)')
     .eq('id', orderId)
     .single()
 
@@ -259,4 +260,200 @@ export async function sendOrderConfirmation(orderId: string, options: SendOption
     await markFailed(supabase, orderId, message)
     return { sent: false, error: message }
   }
+}
+
+
+function buildAdminHtml(order: OrderRecord) {
+  const number = orderNumber(order.id)
+  const lines = addressLines(order.shipping_address)
+  const items = order.order_items || []
+  const itemRows = items.map(item => {
+    const size = itemSize(item)
+    return `
+      <tr>
+        <td style="padding:14px 0;border-bottom:1px solid #e7e5df;">
+          <div style="font-weight:600;color:#161614;">${escapeHtml(item.product_name)}</div>
+          <div style="margin-top:4px;font-size:13px;color:#73716b;">${size ? `Canvas size: ${escapeHtml(size)} · ` : ''}Qty: ${item.quantity}</div>
+        </td>
+        <td style="padding:14px 0;border-bottom:1px solid #e7e5df;text-align:right;color:#161614;white-space:nowrap;">${money(item.line_total)}</td>
+      </tr>`
+  }).join('')
+
+  return `<!doctype html>
+<html>
+  <body style="margin:0;background:#f2f0eb;color:#161614;font-family:Arial,Helvetica,sans-serif;">
+    <div style="max-width:680px;margin:0 auto;padding:36px 18px;">
+      <div style="background:#0a0a09;color:#fff;padding:28px 30px;">
+        <div style="font-size:18px;letter-spacing:.14em;text-transform:uppercase;">SkyShotConner</div>
+        <div style="margin-top:8px;font-size:12px;color:#b8b6af;letter-spacing:.08em;text-transform:uppercase;">New paid order</div>
+      </div>
+      <div style="background:#fff;padding:34px 30px;">
+        <h1 style="margin:0;font-size:32px;line-height:1.1;font-weight:500;">You have a new order.</h1>
+        <p style="margin:18px 0 0;color:#5e5c57;line-height:1.7;">A customer has completed payment on SkyShotConner. The order is ready for fulfilment.</p>
+
+        <div style="margin:28px 0;padding:18px;background:#f7f6f2;border:1px solid #e6e3dc;">
+          <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#77746d;">Order number</div>
+          <div style="margin-top:6px;font-size:19px;font-weight:600;">${number}</div>
+          <div style="margin-top:10px;font-size:28px;font-weight:700;">${money(order.total)}</div>
+        </div>
+
+        <h2 style="font-size:18px;margin:30px 0 8px;">Customer</h2>
+        <p style="margin:0;color:#5e5c57;line-height:1.7;">
+          <strong>${escapeHtml(order.customer_name)}</strong><br/>
+          ${escapeHtml(order.customer_email)}
+          ${order.customer_phone ? `<br/>${escapeHtml(order.customer_phone)}` : ''}
+        </p>
+
+        <h2 style="font-size:18px;margin:30px 0 8px;">Order details</h2>
+        <table role="presentation" style="width:100%;border-collapse:collapse;font-size:14px;">
+          ${itemRows}
+          <tr><td style="padding:15px 0 5px;color:#706e68;">Subtotal</td><td style="padding:15px 0 5px;text-align:right;">${money(order.subtotal)}</td></tr>
+          <tr><td style="padding:5px 0;color:#706e68;">Shipping</td><td style="padding:5px 0;text-align:right;">${money(order.shipping)}</td></tr>
+          <tr><td style="padding:12px 0 0;font-weight:700;font-size:16px;">Total paid</td><td style="padding:12px 0 0;text-align:right;font-weight:700;font-size:16px;">${money(order.total)}</td></tr>
+        </table>
+
+        ${lines.length ? `
+        <h2 style="font-size:18px;margin:34px 0 8px;">Delivery address</h2>
+        <p style="margin:0;color:#5e5c57;line-height:1.7;">${lines.map(line => escapeHtml(line)).join('<br/>')}</p>` : ''}
+
+        ${order.paystack_reference ? `<p style="margin:28px 0 0;color:#77746d;font-size:12px;">Paystack reference: <strong>${escapeHtml(order.paystack_reference)}</strong></p>` : ''}
+
+        <div style="margin-top:30px;">
+          <a href="https://skyshotconner.co.za/admin/orders" style="display:inline-block;background:#0a0a09;color:#fff;text-decoration:none;padding:14px 18px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;">Manage order</a>
+        </div>
+      </div>
+      <div style="padding:20px 30px;color:#77746d;font-size:11px;line-height:1.6;text-align:center;">SkyShotConner order notification</div>
+    </div>
+  </body>
+</html>`
+}
+
+function buildAdminText(order: OrderRecord) {
+  const number = orderNumber(order.id)
+  const items = (order.order_items || []).map(item => {
+    const size = itemSize(item)
+    return `- ${item.product_name}${size ? ` (${size})` : ''} x${item.quantity}: ${money(item.line_total)}`
+  }).join('\n')
+  const address = addressLines(order.shipping_address).join('\n')
+
+  return `SkyShotConner — New paid order
+
+Order: ${number}
+Total: ${money(order.total)}
+
+Customer:
+${order.customer_name}
+${order.customer_email}
+${order.customer_phone || ''}
+
+Items:
+${items}
+
+Subtotal: ${money(order.subtotal)}
+Shipping: ${money(order.shipping)}
+Total paid: ${money(order.total)}
+${address ? `\nDelivery address:\n${address}\n` : ''}
+${order.paystack_reference ? `Paystack reference: ${order.paystack_reference}\n` : ''}
+Manage orders: https://skyshotconner.co.za/admin/orders
+`
+}
+
+async function markAdminNotificationFailed(supabase: ReturnType<typeof serviceClient>, orderId: string, error: string) {
+  await supabase.from('orders').update({
+    new_order_notification_status: 'failed',
+    new_order_notification_error: error.slice(0, 1000),
+    new_order_notification_updated_at: new Date().toISOString(),
+  }).eq('id', orderId)
+}
+
+export async function sendNewOrderNotification(orderId: string) {
+  const supabase = serviceClient()
+
+  const { data: claimed, error: claimError } = await supabase
+    .from('orders')
+    .update({
+      new_order_notification_status: 'sending',
+      new_order_notification_error: null,
+      new_order_notification_updated_at: new Date().toISOString(),
+    })
+    .eq('id', orderId)
+    .eq('payment_status', 'paid')
+    .in('new_order_notification_status', ['pending', 'failed'])
+    .select('id')
+    .maybeSingle()
+
+  if (claimError) throw claimError
+  if (!claimed) {
+    const { data: existing } = await supabase.from('orders').select('new_order_notification_status').eq('id', orderId).maybeSingle()
+    return { sent: existing?.new_order_notification_status === 'sent', skipped: true }
+  }
+
+  const apiKey = process.env.RESEND_API_KEY?.trim()
+  const from = process.env.ORDER_EMAIL_FROM?.trim() || 'SkyShotConner <orders@skyshotconner.co.za>'
+  const to = process.env.ORDER_ADMIN_EMAIL?.trim() || 'conneraviation18@gmail.com'
+  if (!apiKey) {
+    const error = 'RESEND_API_KEY is not configured'
+    await markAdminNotificationFailed(supabase, orderId, error)
+    return { sent: false, error }
+  }
+
+  const { data: order, error: orderError } = await supabase
+    .from('orders')
+    .select('id,customer_name,customer_email,customer_phone,created_at,paid_at,subtotal,shipping,total,shipping_address,paystack_reference,order_items(product_name,quantity,unit_price,line_total,sku,canvas_size)')
+    .eq('id', orderId)
+    .single()
+
+  if (orderError || !order) {
+    const error = orderError?.message || 'Order not found'
+    await markAdminNotificationFailed(supabase, orderId, error)
+    return { sent: false, error }
+  }
+
+  const record = order as unknown as OrderRecord
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from,
+        to: [to],
+        subject: `New order — ${orderNumber(record.id)} — ${money(record.total)}`,
+        html: buildAdminHtml(record),
+        text: buildAdminText(record),
+      }),
+      cache: 'no-store',
+    })
+    const result = await response.json().catch(() => ({}))
+
+    if (!response.ok || !result?.id) {
+      const error = String(result?.message || result?.error || `Email provider returned HTTP ${response.status}`)
+      await markAdminNotificationFailed(supabase, orderId, error)
+      return { sent: false, error }
+    }
+
+    await supabase.from('orders').update({
+      new_order_notification_status: 'sent',
+      new_order_notification_sent_at: new Date().toISOString(),
+      new_order_notification_provider_id: String(result.id),
+      new_order_notification_error: null,
+      new_order_notification_updated_at: new Date().toISOString(),
+    }).eq('id', orderId)
+
+    return { sent: true, id: String(result.id) }
+  } catch (error: any) {
+    const message = String(error?.message || 'Could not send new-order notification')
+    await markAdminNotificationFailed(supabase, orderId, message)
+    return { sent: false, error: message }
+  }
+}
+
+export async function sendOrderEmails(orderId: string) {
+  const [customer, admin] = await Promise.all([
+    sendOrderConfirmation(orderId),
+    sendNewOrderNotification(orderId),
+  ])
+  return { customer, admin }
 }
