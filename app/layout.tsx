@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { GoogleAnalytics } from '@next/third-parties/google'
 import './globals.css'
 import './storefront-overrides.css'
 import './product-card-orientation.css'
@@ -20,5 +21,14 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body><FaviconSync/><ProductCardOrientation/>{children}</body></html>
+  return (
+    <html lang="en">
+      <body>
+        <FaviconSync/>
+        <ProductCardOrientation/>
+        {children}
+      </body>
+      <GoogleAnalytics gaId="G-059TXKR7BV" />
+    </html>
+  )
 }
