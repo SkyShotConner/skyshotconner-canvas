@@ -60,7 +60,7 @@ export async function GET(request: Request) {
           console.error('Order confirmation email retry failed', error)
           return { customer: { sent: false }, admin: { sent: false }, error: String(error) }
         })
-        return NextResponse.json({ status: 'paid', order_id: order.id, confirmation_email: emailResult.customer?.sent ? 'sent' : 'pending', admin_notification: emailResult.admin?.sent ? 'sent' : 'pending' })
+        return NextResponse.json({ status: 'paid', order_id: order.id, order_total: Number(order.total), currency: 'ZAR', confirmation_email: emailResult.customer?.sent ? 'sent' : 'pending', admin_notification: emailResult.admin?.sent ? 'sent' : 'pending' })
       }
 
       const { error: updateError } = await supabase.from('orders').update({
@@ -79,7 +79,7 @@ export async function GET(request: Request) {
         console.error('Order confirmation email failed after verification', error)
         return { customer: { sent: false }, admin: { sent: false }, error: String(error) }
       })
-      return NextResponse.json({ status: 'paid', order_id: order.id, confirmation_email: emailResult.customer?.sent ? 'sent' : 'pending', admin_notification: emailResult.admin?.sent ? 'sent' : 'pending' })
+      return NextResponse.json({ status: 'paid', order_id: order.id, order_total: Number(order.total), currency: 'ZAR', confirmation_email: emailResult.customer?.sent ? 'sent' : 'pending', admin_notification: emailResult.admin?.sent ? 'sent' : 'pending' })
     }
 
     if (transaction.status === 'success') {
