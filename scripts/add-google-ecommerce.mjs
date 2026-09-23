@@ -32,10 +32,20 @@ if (!s.includes("sendGAEvent('event','add_to_cart'")) {
 }
 
 if (!s.includes("sendGAEvent('event','view_item'")) {
-  const productStart = "function ProductPage({product,selectedSize,setSelectedSize,selectedFrame,setSelectedFrame,add,wished,toggleWish}:{product:Product;selectedSize:string;setSelectedSize:(x:string)=>void;selectedFrame:string;setSelectedFrame:(x:string)=>void;add:(p:Product)=>void;wished:boolean;toggleWish:()=>void}){const total=canvasPrice(selectedSize,selectedFrame);return "
-  if (!s.includes(productStart)) throw new Error('Unable to locate product page for GA4 view_item')
-  const trackedProductStart = "function ProductPage({product,selectedSize,setSelectedSize,selectedFrame,setSelectedFrame,add,wished,toggleWish}:{product:Product;selectedSize:string;setSelectedSize:(x:string)=>void;selectedFrame:string;setSelectedFrame:(x:string)=>void;add:(p:Product)=>void;wished:boolean;toggleWish:()=>void}){const total=canvasPrice(selectedSize,selectedFrame);useEffect(()=>{sendGAEvent('event','view_item',{currency:'ZAR',value:total,items:[gaItem(product,selectedSize,selectedFrame,total,1)]})},[product.id]);return "
-  s = s.replace(productStart, trackedProductStart)
+  const productStart = s.indexOf('function ProductPage(')
+  const cartStart = s.indexOf('function Cart(', productStart)
+  if (productStart < 0 || cartStart < 0) throw new Error('Unable to locate product page for GA4 view_item')
+  let productBlock = s.slice(productStart, cartStart)
+  const unframedTotal = "const total=canvasPrice(selectedSize,'Unframed');"
+  const framedTotal = "const total=canvasPrice(selectedSize,selectedFrame);"
+  if (productBlock.includes(unframedTotal)) {
+    productBlock = productBlock.replace(unframedTotal, unframedTotal + "useEffect(()=>{sendGAEvent('event','view_item',{currency:'ZAR',value:total,items:[gaItem(product,selectedSize,'Unframed',total,1)]})},[product.id]);")
+  } else if (productBlock.includes(framedTotal)) {
+    productBlock = productBlock.replace(framedTotal, framedTotal + "useEffect(()=>{sendGAEvent('event','view_item',{currency:'ZAR',value:total,items:[gaItem(product,selectedSize,selectedFrame,total,1)]})},[product.id]);")
+  } else {
+    throw new Error('Unable to locate product total for GA4 view_item')
+  }
+  s = s.slice(0, productStart) + productBlock + s.slice(cartStart)
 }
 
 if (!s.includes("sendGAEvent('event','begin_checkout'")) {
