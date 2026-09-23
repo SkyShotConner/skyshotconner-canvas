@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { sendGAEvent } from '@next/third-parties/google'
 import { CheckCircle2, ArrowUpRight } from 'lucide-react'
 
 export default function OrderConfirmation(){
@@ -17,9 +18,40 @@ export default function OrderConfirmation(){
       .then(r=>r.json())
       .then(result=>{
         if(!active)return
-        setOrder(result.order_id||reference)
+        const transactionId=String(result.order_id||reference)
+        setOrder(transactionId)
         setStatus(result.status==='paid'?'paid':result.status==='failed'?'failed':'pending')
-        if(result.status==='paid')localStorage.removeItem('ssc-cart')
+
+        if(result.status==='paid'){
+          try{
+            const rawCart=localStorage.getItem('ssc-cart')
+            const cart=rawCart?JSON.parse(rawCart):[]
+            const items=Array.isArray(cart)?cart.map((item:any)=>({
+              item_id:String(item?.product?.id||''),
+              item_name:String(item?.product?.name||'Artwork'),
+              item_category:String(item?.product?.category||'Photography Art'),
+              item_variant:`${item?.size||''} / ${item?.frame||''}`,
+              price:Number(item?.price)||0,
+              quantity:Number(item?.quantity)||1,
+            })).filter((item:any)=>item.item_id):[]
+            const merchandiseValue=items.reduce((sum:number,item:any)=>sum+(Number(item.price)||0)*(Number(item.quantity)||1),0)
+            const purchaseKey=`ssc-ga-purchase:${transactionId}`
+
+            if(!localStorage.getItem(purchaseKey)){
+              sendGAEvent('event','purchase',{
+                transaction_id:transactionId,
+                currency:'ZAR',
+                value:merchandiseValue>0?merchandiseValue:Math.max(0,(Number(result.order_total)||0)-95),
+                shipping:items.length?95:0,
+                items,
+              })
+              localStorage.setItem(purchaseKey,new Date().toISOString())
+            }
+          }catch(error){
+            console.error('Could not prepare GA4 purchase event',error)
+          }
+          localStorage.removeItem('ssc-cart')
+        }
       })
       .catch(()=>active&&setStatus('pending'))
 
