@@ -12,10 +12,7 @@ if (!s.includes("import { sendGAEvent } from '@next/third-parties/google'")) {
 if (!s.includes('function gaItem(')) {
   const anchor = "function canvasPrice(size:string,frame:string){return (CANVAS_PRICES[size]||99.99)+(FRAME_PRICES[frame]||0)}"
   if (!s.includes(anchor)) throw new Error('Unable to locate canvas price helper for GA4 ecommerce')
-  const helpers = `
-function gaItem(product:Product,size:string,frame:string,price:number,quantity=1){return {item_id:product.id,item_name:product.name,item_category:product.category||'Photography Art',item_variant:\`${size} / ${frame}\`,price,quantity}}
-function gaItems(cart:CartItem[]){return cart.map(item=>gaItem(item.product,item.size,item.frame,item.price,item.quantity))}
-`
+  const helpers = "\nfunction gaItem(product:Product,size:string,frame:string,price:number,quantity=1){return {item_id:product.id,item_name:product.name,item_category:product.category||'Photography Art',item_variant:`${size} / ${frame}`,price,quantity}}\nfunction gaItems(cart:CartItem[]){return cart.map(item=>gaItem(item.product,item.size,item.frame,item.price,item.quantity))}\n"
   s = s.replace(anchor, anchor + helpers)
 }
 
