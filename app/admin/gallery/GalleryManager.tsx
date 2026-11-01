@@ -48,6 +48,7 @@ export default function GalleryManager() {
     if (!supabase || !files.length) return
     setBusy(true); setMessage('')
     const uploaded: string[] = []
+    const createdIds: string[] = []
     try {
       for (const file of files) {
         if (!['image/jpeg','image/png','image/webp'].includes(file.type)) throw new Error(`${file.name}: use JPEG, PNG or WebP.`)
@@ -70,6 +71,7 @@ export default function GalleryManager() {
           display_order:photos.length + uploaded.length
         }).select('id').single()
         if (error) throw error
+        createdIds.push(row.id)
         if (privateNote.trim()) {
           const noteResult = await supabase.from('gallery_image_notes').insert({ image_id:row.id, private_note:privateNote.trim() })
           if (noteResult.error) throw noteResult.error
@@ -80,6 +82,7 @@ export default function GalleryManager() {
       setMessage('Photographs uploaded as drafts. Publish each one when you are ready.')
     } catch (error:any) {
       setMessage(error?.message || 'Upload failed.')
+      if (createdIds.length) await supabase.from('gallery_images').delete().in('id', createdIds)
       if (uploaded.length) await supabase.storage.from('gallery-images').remove(uploaded)
     } finally { setBusy(false) }
   }
@@ -95,6 +98,22 @@ export default function GalleryManager() {
     }).eq('id',photo.id)
     if (error) setMessage(error.message)
     else { await load(); setMessage('Gallery updated.') }
+    setBusy(false)
+  }
+
+  async function movePhoto(index:number, direction:-1|1) {
+    if (!supabase) return
+    const targetIndex = index + direction
+    if (targetIndex < 0 || targetIndex >= photos.length) return
+    const current = photos[index], neighbor = photos[targetIndex]
+    setBusy(true); setMessage('')
+    const results = await Promise.all([
+      supabase.from('gallery_images').update({display_order:neighbor.display_order}).eq('id',current.id),
+      supabase.from('gallery_images').update({display_order:current.display_order}).eq('id',neighbor.id),
+    ])
+    const error = results.find(result => result.error)?.error
+    if (error) setMessage(error.message)
+    else { await load(); setMessage('Photograph order updated.') }
     setBusy(false)
   }
 
@@ -133,8 +152,8 @@ export default function GalleryManager() {
           <label>Alt text<input value={photo.alt_text} onChange={e=>setPhotos(rows=>rows.map(row=>row.id===photo.id?{...row,alt_text:e.target.value}:row))}/></label>
           <label>Private note<textarea value={photo.private_note || ''} onChange={e=>setPhotos(rows=>rows.map(row=>row.id===photo.id?{...row,private_note:e.target.value}:row))}/></label>
           <div className="gallery-admin-actions">
-            <button className="admin-button secondary-admin" disabled={busy || index===0} onClick={()=>void updatePhoto(photo,{display_order:Math.max(0,photo.display_order-1)})}>Move up</button>
-            <button className="admin-button secondary-admin" disabled={busy || index===photos.length-1} onClick={()=>void updatePhoto(photo,{display_order:photo.display_order+1})}>Move down</button>
+            <button className="admin-button secondary-admin" disabled={busy || index===0} onClick={()=>void movePhoto(index,-1)}>Move up</button>
+            <button className="admin-button secondary-admin" disabled={busy || index===photos.length-1} onClick={()=>void movePhoto(index,1)}>Move down</button>
             <button className="admin-button secondary-admin" disabled={busy} onClick={()=>void updatePhoto(photo,{alt_text:photo.alt_text})}>Save alt text</button>
             <button className="admin-button secondary-admin" disabled={busy} onClick={()=>void saveNote(photo)}>Save note</button>
             <button className="admin-button" disabled={busy} onClick={()=>void updatePhoto(photo,{is_published:!photo.is_published})}>{photo.is_published?'Unpublish':'Publish'}</button>
