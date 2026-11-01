@@ -6,18 +6,57 @@ import { createClient } from '@/lib/supabase/client'
 type Photo = { id:string; original_path:string; display_path:string; alt_text:string; width:number|null; height:number|null; is_published:boolean; display_order:number; preview?:string; private_note?:string }
 
 async function makeDisplayImage(file: File): Promise<{ blob: Blob; width: number; height: number }> {
-  const bitmap = await createImageBitmap(file)
-  const scale = Math.min(1, 2200 / bitmap.width)
-  const width = Math.max(1, Math.round(bitmap.width * scale))
-  const height = Math.max(1, Math.round(bitmap.height * scale))
-  const canvas = document.createElement('canvas')
-  canvas.width = width; canvas.height = height
-  const context = canvas.getContext('2d')
-  if (!context) throw new Error('Could not prepare the display image.')
-  context.drawImage(bitmap, 0, 0, width, height)
-  bitmap.close()
-  const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('Could not create the WebP preview.')), 'image/webp', 0.86))
-  return { blob, width, height }
+  let source: CanvasImageSource
+  let sourceWidth = 0
+  let sourceHeight = 0
+  let bitmap: ImageBitmap | null = null
+  let objectUrl: string | null = null
+
+  try {
+    // Prefer ImageBitmap for speed, but fall back to the browser's image
+    // element decoder for browsers/files that ImageBitmap cannot handle.
+    try {
+      bitmap = await createImageBitmap(file)
+      source = bitmap
+      sourceWidth = bitmap.width
+      sourceHeight = bitmap.height
+    } catch {
+      objectUrl = URL.createObjectURL(file)
+      const image = new Image()
+      image.src = objectUrl
+      await image.decode()
+      source = image
+      sourceWidth = image.naturalWidth
+      sourceHeight = image.naturalHeight
+    }
+
+    if (!sourceWidth || !sourceHeight) {
+      throw new Error('The image has no readable dimensions.')
+    }
+
+    const scale = Math.min(1, 2200 / sourceWidth)
+    const width = Math.max(1, Math.round(sourceWidth * scale))
+    const height = Math.max(1, Math.round(sourceHeight * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Could not prepare the display image.')
+    context.drawImage(source, 0, 0, width, height)
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(value => value
+        ? resolve(value)
+        : reject(new Error('Your browser could not create the WebP preview. Try a recent version of Chrome, Edge or Firefox.')),
+      'image/webp', 0.86)
+    })
+    return { blob, width, height }
+  } catch {
+    throw new Error(`${file.name}: this image could not be decoded by your browser. Please open it and export it as a standard JPEG, PNG or WebP, then try again.`)
+  } finally {
+    bitmap?.close()
+    if (objectUrl) URL.revokeObjectURL(objectUrl)
+  }
 }
 
 export default function GalleryManager() {
